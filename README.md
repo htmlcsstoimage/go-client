@@ -2,6 +2,13 @@
 
 A Go client for the HTML/CSS to Image API, with support for Google Fonts, PDF options, templates, and signed rendering URLs.
 
+## Links
+
+- [HTML/CSS to Image](https://htmlcsstoimage.com/)
+- [API documentation](https://docs.htmlcsstoimage.com/)
+- [Go examples](https://github.com/htmlcsstoimage/go-client/tree/main/examples)
+- [Report an issue](https://github.com/htmlcsstoimage/go-client/issues)
+
 ## Installation
 
 Requires Go 1.21 or newer.
