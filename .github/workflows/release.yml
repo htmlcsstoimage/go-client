@@ -1,0 +1,128 @@
+# Publishes the version in VERSION after tests pass for a push to main.
+# Go modules are published through Git tags; no registry credentials are needed.
+name: Release
+
+on:
+  workflow_run:
+    workflows: [Test]
+    types: [completed]
+    branches: [main]
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  release:
+    if: >-
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_repository.full_name == github.repository
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.workflow_run.head_sha }}
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: stable
+          cache: false
+
+      - name: Check release version
+        id: version
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          package_version="$(cat VERSION)"
+          if [[ ! "$package_version" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
+            echo "VERSION must contain a stable semantic version such as 0.1.0, without a v prefix." >&2
+            exit 1
+          fi
+
+          tag="v${package_version}"
+          module="$(go list -m)"
+          major="${package_version%%.*}"
+          expected_module="github.com/htmlcsstoimage/go-client"
+          if [[ "$major" != 0 && "$major" != 1 ]]; then
+            expected_module+="/v${major}"
+          fi
+          if [[ "$module" != "$expected_module" ]]; then
+            echo "Version ${package_version} requires module path ${expected_module}." >&2
+            exit 1
+          fi
+
+          create_tag=true
+          if git rev-parse --verify --quiet "refs/tags/${tag}" >/dev/null; then
+            create_tag=false
+            echo "${tag} already exists; leaving it unchanged."
+          fi
+
+          # Fail on API errors rather than treating them as a missing release.
+          release_tags="$(gh api --paginate "repos/${GITHUB_REPOSITORY}/releases?per_page=100" --jq '.[].tag_name')"
+          create_release=true
+          while IFS= read -r release_tag; do
+            if [[ "$release_tag" == "$tag" ]]; then
+              create_release=false
+            fi
+          done <<< "$release_tags"
+          if [[ "$create_release" == false && "$create_tag" == true ]]; then
+            echo "GitHub Release ${tag} exists but its Git tag is missing." >&2
+            exit 1
+          fi
+
+          echo "tag=${tag}" >> "$GITHUB_OUTPUT"
+          echo "module=${module}" >> "$GITHUB_OUTPUT"
+          echo "create_tag=${create_tag}" >> "$GITHUB_OUTPUT"
+          echo "create_release=${create_release}" >> "$GITHUB_OUTPUT"
+
+      - name: Create version tag
+        if: steps.version.outputs.create_tag == 'true'
+        shell: bash
+        env:
+          TAG: ${{ steps.version.outputs.tag }}
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag --annotate "$TAG" --message "Release $TAG"
+          git push origin "refs/tags/${TAG}"
+
+      - name: Create GitHub Release
+        if: steps.version.outputs.create_release == 'true'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.version.outputs.tag }}
+        run: gh release create "$TAG" --verify-tag --title "$TAG" --generate-notes
+
+      # Run here: tags created with GITHUB_TOKEN do not trigger another workflow.
+      # Also runs on retries, so a failed indexing request can be recovered safely.
+      - name: Request Go module indexing
+        shell: bash
+        env:
+          MODULE: ${{ steps.version.outputs.module }}
+          TAG: ${{ steps.version.outputs.tag }}
+          GOPROXY: https://proxy.golang.org
+          GOPRIVATE: ''
+          GONOPROXY: ''
+        run: |
+          set -euo pipefail
+          for attempt in 1 2 3 4 5; do
+            if go list -m "${MODULE}@${TAG}"; then
+              exit 0
+            fi
+            if [[ "$attempt" != 5 ]]; then
+              sleep 15
+            fi
+          done
+          echo "The version tag is published, but Go proxy indexing failed. Rerun this release workflow to retry." >&2
+          exit 1
