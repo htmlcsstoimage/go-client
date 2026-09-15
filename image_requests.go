@@ -92,10 +92,12 @@ func (URLImageRequest) imageRequest() {}
 // TemplatedImageRequest renders a saved template using variable values.
 type TemplatedImageRequest struct {
 	// TemplateID identifies the template used to render the image. Required.
-	TemplateID string `json:"template_id"`
+	// Sent in the POST URL path, not the JSON body.
+	TemplateID string `json:"-"`
 	// TemplateVersion pins a specific template version.
 	// Nil uses the template's latest version.
-	TemplateVersion *int64 `json:"template_version,omitempty"`
+	// Sent in the POST URL path, not the JSON body.
+	TemplateVersion *int64 `json:"-"`
 	// TemplateValues maps template variable names to JSON-serializable values.
 	// Values can include strings, numbers, booleans, arrays, and objects.
 	TemplateValues map[string]any `json:"template_values"`

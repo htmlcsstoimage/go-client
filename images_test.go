@@ -71,3 +71,60 @@ func TestBatch(t *testing.T) {
 		t.Fatal("accepted nil request")
 	}
 }
+
+func TestCreateTemplatedImageRouteAndBody(t *testing.T) {
+	for _, tc := range []struct {
+		name    string
+		version *int64
+		path    string
+	}{
+		{"latest", nil, "/v1/image/t-example"},
+		{"pinned", Ptr(int64(9007199254740993)), "/v1/image/t-example/9007199254740993"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			for _, pointer := range []bool{false, true} {
+				r := TemplatedImageRequest{TemplateID: "t-example", TemplateVersion: tc.version, TemplateValues: map[string]any{"title": "Hello 👩🏽‍💻"}, Format: PNG}
+				c := testClient(t, 200, `{"id":"image-id","url":"https://hcti.io/v1/store/image-id"}`, func(req *http.Request) {
+					if req.Method != "POST" || req.URL.EscapedPath() != tc.path || req.URL.RawQuery != "" {
+						t.Fatalf("unexpected route: %s %s", req.Method, req.URL)
+					}
+					var body map[string]json.RawMessage
+					if err := json.NewDecoder(req.Body).Decode(&body); err != nil {
+						t.Fatal(err)
+					}
+					if len(body) != 2 || string(body["format"]) != `"png"` {
+						t.Fatalf("unexpected body: %v", body)
+					}
+					var values map[string]string
+					if err := json.Unmarshal(body["template_values"], &values); err != nil || values["title"] != "Hello 👩🏽‍💻" {
+						t.Fatalf("values: %v, %v", values, err)
+					}
+				})
+				var input ImageRequest = r
+				if pointer {
+					input = &r
+				}
+				got, err := c.CreateImage(context.Background(), input)
+				if err != nil || got.URL != "https://hcti.io/v1/store/image-id" {
+					t.Fatalf("result: %v, %v", got, err)
+				}
+				if r.TemplateID != "t-example" || r.TemplateVersion != tc.version {
+					t.Fatal("request mutated")
+				}
+			}
+		})
+	}
+}
+
+func TestCreateTemplatedImageRejectsInvalidSelectors(t *testing.T) {
+	c := testClient(t, 200, "", func(*http.Request) { t.Fatal("invalid request reached transport") })
+	for _, r := range []TemplatedImageRequest{
+		{}, {TemplateID: "t-"}, {TemplateID: "not-a-template"},
+		{TemplateID: "t-example", TemplateVersion: Ptr(int64(0))},
+		{TemplateID: "t-example", TemplateVersion: Ptr(int64(-1))},
+	} {
+		if _, err := c.CreateImage(context.Background(), r); err == nil {
+			t.Fatal("accepted invalid selectors")
+		}
+	}
+}

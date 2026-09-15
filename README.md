@@ -95,6 +95,8 @@ image, err := client.CreateImage(ctx, hcti.TemplatedImageRequest{
 })
 ```
 
+Templated image creation sends the template ID and optional version in the POST URL path; the JSON body contains `template_values` and rendering options.
+
 Use `CreateTemplateVersion` to add a version to a stable template ID. `ListTemplates` returns the latest versions; `ListTemplateVersions` lists versions of one template. Pass `page.Pagination.NextPageStart` as `TemplateListOptions.MaxVersion` to fetch subsequent pages; stop when nil. `DeleteTemplate` removes the entire template, not an individual version.
 
 Listing returns common fields plus `Template.Raw`, which retains the complete JSON for template-editor block variants not yet modeled by the client.

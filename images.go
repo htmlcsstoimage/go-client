@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"net/http"
 	"reflect"
+	"strconv"
+	"strings"
 )
 
 // Image identifies a created image and its rendering URL.
@@ -20,8 +22,32 @@ func (c *Client) CreateImage(ctx context.Context, request ImageRequest) (*Image,
 	if request == nil || (reflect.ValueOf(request).Kind() == reflect.Ptr && reflect.ValueOf(request).IsNil()) {
 		return nil, fmt.Errorf("hcti: image request is required")
 	}
+	path := "/v1/image"
+	var template *TemplatedImageRequest
+	switch r := request.(type) {
+	case TemplatedImageRequest:
+		template = &r
+	case *TemplatedImageRequest:
+		template = r
+	}
+	if template != nil {
+		if !strings.HasPrefix(template.TemplateID, "t-") || len(template.TemplateID) == 2 {
+			return nil, fmt.Errorf("hcti: a template ID beginning with t- is required")
+		}
+		var err error
+		path, err = resourcePath("image", template.TemplateID)
+		if err != nil {
+			return nil, err
+		}
+		if template.TemplateVersion != nil {
+			if *template.TemplateVersion <= 0 {
+				return nil, fmt.Errorf("hcti: template version must be positive")
+			}
+			path += "/" + strconv.FormatInt(*template.TemplateVersion, 10)
+		}
+	}
 	var result Image
-	if err := c.do(ctx, http.MethodPost, "/v1/image", nil, request, &result); err != nil {
+	if err := c.do(ctx, http.MethodPost, path, nil, request, &result); err != nil {
 		return nil, err
 	}
 	return &result, nil
