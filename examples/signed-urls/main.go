@@ -21,7 +21,7 @@ func run() error {
 	}
 	renderOptions := hcti.RenderImageOptions{Width: hcti.Ptr(600), Format: hcti.WebP}
 
-	screenshotURL, err := client.GenerateCreateAndRenderURL(hcti.URLImageRequest{
+	screenshotURL, err := client.GenerateCreateAndRenderURL(&hcti.URLImageRequest{
 		URL:          "https://example.com",
 		FullScreen:   hcti.Ptr(true),
 		ImageOptions: hcti.ImageOptions{Format: hcti.PNG},
@@ -33,7 +33,7 @@ func run() error {
 
 	// Optional: use a template belonging to the same organization as the credentials.
 	if templateID := os.Getenv("HCTI_TEMPLATE_ID"); templateID != "" {
-		templateURL, err := client.GenerateTemplatedImageURL(hcti.TemplatedImageRequest{
+		templateURL, err := client.GenerateTemplatedImageURL(&hcti.TemplatedImageRequest{
 			TemplateID:     templateID,
 			TemplateValues: map[string]any{"title": "Hello from Go", "subtitle": "A signed image URL."},
 			Format:         hcti.PNG,

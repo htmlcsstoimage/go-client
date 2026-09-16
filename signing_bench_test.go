@@ -14,10 +14,10 @@ func BenchmarkGenerateCreateAndRenderURL(b *testing.B) {
 	client := NewClient("test-id", "test-secret")
 	for _, tc := range []struct {
 		name    string
-		request URLImageRequest
+		request *URLImageRequest
 	}{
-		{"minimal", URLImageRequest{URL: "https://example.com"}},
-		{"configured", URLImageRequest{
+		{"minimal", &URLImageRequest{URL: "https://example.com"}},
+		{"configured", &URLImageRequest{
 			URL: "https://example.com/?a=1&b=2", CSS: Ptr("body { background: white; }"),
 			Headers:                 map[string]string{"Accept-Language": "en-US", "X-Custom": "example"},
 			AdditionalHeaderOrigins: []string{"https://cdn.example.com"}, FullScreen: Ptr(true),
@@ -42,19 +42,19 @@ func BenchmarkGenerateTemplatedImageURL(b *testing.B) {
 	client := NewClient("test-id", "test-secret")
 	for _, tc := range []struct {
 		name    string
-		request TemplatedImageRequest
+		request *TemplatedImageRequest
 	}{
-		{"minimal", TemplatedImageRequest{TemplateID: "tpl", TemplateValues: map[string]any{"title": "Hello world"}}},
-		{"scalars", TemplatedImageRequest{TemplateID: "tpl", TemplateVersion: Ptr(int64(42)), Format: PNG, TemplateValues: map[string]any{"title": "Hello 👩🏽‍💻", "count": 42, "enabled": false, "price": 19.95, "description": "A card with <html> & special characters"}}},
-		{"structured", TemplatedImageRequest{TemplateID: "tpl", TemplateVersion: Ptr(int64(42)), TemplateValues: map[string]any{"title": "Hello", "items": []any{map[string]any{"label": "One", "count": 1}, map[string]any{"label": "Two", "count": 2}}}}},
+		{"minimal", &TemplatedImageRequest{TemplateID: "tpl", TemplateValues: map[string]any{"title": "Hello world"}}},
+		{"scalars", &TemplatedImageRequest{TemplateID: "tpl", TemplateVersion: Ptr(int64(42)), Format: PNG, TemplateValues: map[string]any{"title": "Hello 👩🏽‍💻", "count": 42, "enabled": false, "price": 19.95, "description": "A card with <html> & special characters"}}},
+		{"structured", &TemplatedImageRequest{TemplateID: "tpl", TemplateVersion: Ptr(int64(42)), TemplateValues: map[string]any{"title": "Hello", "items": []any{map[string]any{"label": "One", "count": 1}, map[string]any{"label": "Two", "count": 2}}}}},
 	} {
 		b.Run(tc.name, func(b *testing.B) {
 			for _, impl := range []struct {
 				name     string
-				generate func(TemplatedImageRequest) (string, error)
+				generate func(*TemplatedImageRequest) (string, error)
 			}{
-				{"buffer", func(r TemplatedImageRequest) (string, error) { return client.GenerateTemplatedImageURL(r) }},
-				{"previous", func(r TemplatedImageRequest) (string, error) { return legacyTemplateURL(client, r) }},
+				{"buffer", func(r *TemplatedImageRequest) (string, error) { return client.GenerateTemplatedImageURL(r) }},
+				{"previous", func(r *TemplatedImageRequest) (string, error) { return legacyTemplateURL(client, r) }},
 			} {
 				b.Run(impl.name, func(b *testing.B) {
 					b.ReportAllocs()
@@ -70,7 +70,7 @@ func BenchmarkGenerateTemplatedImageURL(b *testing.B) {
 }
 
 // Retain the previous implementation only as a benchmark/compatibility baseline.
-func legacyTemplateURL(c *Client, r TemplatedImageRequest) (string, error) {
+func legacyTemplateURL(c *Client, r *TemplatedImageRequest) (string, error) {
 	q := url.Values{}
 	if r.TemplateVersion != nil {
 		q.Set("template_version", strconv.FormatInt(*r.TemplateVersion, 10))
@@ -92,9 +92,9 @@ func legacyTemplateURL(c *Client, r TemplatedImageRequest) (string, error) {
 		q.Set(key, text)
 	}
 	encoded := q.Encode()
-	mac := hmac.New(sha256.New, []byte(c.apiKey))
+	mac := hmac.New(sha256.New, []byte(c.config.APIKey))
 	_, _ = mac.Write([]byte(encoded))
-	result := c.baseURL + "/v1/image/" + url.PathEscape(r.TemplateID) + "/" + hex.EncodeToString(mac.Sum(nil))
+	result := c.config.BaseURL + "/v1/image/" + url.PathEscape(r.TemplateID) + "/" + hex.EncodeToString(mac.Sum(nil))
 	if r.Format != "" {
 		result += "/" + string(r.Format)
 	}

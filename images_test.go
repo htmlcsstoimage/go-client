@@ -36,7 +36,7 @@ func TestCreateImageSerialization(t *testing.T) {
 			}
 		}
 	})
-	request := HTMLImageRequest{HTML: "<h1>Hello</h1>", GoogleFonts: GoogleFonts{" Open Sans ", "Roboto", "Open Sans", " "}, ImageOptions: ImageOptions{
+	request := &HTMLImageRequest{HTML: "<h1>Hello</h1>", GoogleFonts: GoogleFonts{" Open Sans ", "Roboto", "Open Sans", " "}, ImageOptions: ImageOptions{
 		RenderOptions: RenderOptions{TransparentBackground: Ptr(false)}, DedupeDurationSeconds: Ptr(0),
 		PDFOptions: &PDFOptions{PrintBackground: Ptr(false), PageWidth: &PDFLength{8.5, Inches}, Margins: &PDFMargins{PDFLength{1, Centimeters}, PDFLength{2, Millimeters}, PDFLength{3, Pixels}, PDFLength{4, Inches}}},
 	}}
@@ -59,11 +59,11 @@ func TestBatch(t *testing.T) {
 			t.Fatal(body)
 		}
 	})
-	result, err := c.CreateImageBatch(context.Background(), BatchRequest{Variations: []ImageRequest{HTMLImageRequest{CSS: Ptr("h1{color:red}")}}, DefaultOptions: HTMLImageRequest{HTML: "<h1>Hello</h1>"}})
+	result, err := c.CreateImageBatch(context.Background(), &BatchRequest{Variations: []ImageRequest{&HTMLImageRequest{CSS: Ptr("h1{color:red}")}}, DefaultOptions: &HTMLImageRequest{HTML: "<h1>Hello</h1>"}})
 	if err != nil || len(result.Images) != 1 {
 		t.Fatalf("%v %v", result, err)
 	}
-	if _, err := c.CreateImageBatch(context.Background(), BatchRequest{Variations: []ImageRequest{TemplatedImageRequest{TemplateID: "tpl"}}}); err == nil {
+	if _, err := c.CreateImageBatch(context.Background(), &BatchRequest{Variations: []ImageRequest{&TemplatedImageRequest{TemplateID: "tpl"}}}); err == nil {
 		t.Fatal("accepted unsupported batch request")
 	}
 	var nilRequest *HTMLImageRequest
@@ -82,35 +82,29 @@ func TestCreateTemplatedImageRouteAndBody(t *testing.T) {
 		{"pinned", Ptr(int64(9007199254740993)), "/v1/image/t-example/9007199254740993"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			for _, pointer := range []bool{false, true} {
-				r := TemplatedImageRequest{TemplateID: "t-example", TemplateVersion: tc.version, TemplateValues: map[string]any{"title": "Hello 👩🏽‍💻"}, Format: PNG}
-				c := testClient(t, 200, `{"id":"image-id","url":"https://hcti.io/v1/store/image-id"}`, func(req *http.Request) {
-					if req.Method != "POST" || req.URL.EscapedPath() != tc.path || req.URL.RawQuery != "" {
-						t.Fatalf("unexpected route: %s %s", req.Method, req.URL)
-					}
-					var body map[string]json.RawMessage
-					if err := json.NewDecoder(req.Body).Decode(&body); err != nil {
-						t.Fatal(err)
-					}
-					if len(body) != 2 || string(body["format"]) != `"png"` {
-						t.Fatalf("unexpected body: %v", body)
-					}
-					var values map[string]string
-					if err := json.Unmarshal(body["template_values"], &values); err != nil || values["title"] != "Hello 👩🏽‍💻" {
-						t.Fatalf("values: %v, %v", values, err)
-					}
-				})
-				var input ImageRequest = r
-				if pointer {
-					input = &r
+			r := &TemplatedImageRequest{TemplateID: "t-example", TemplateVersion: tc.version, TemplateValues: map[string]any{"title": "Hello 👩🏽‍💻"}, Format: PNG}
+			c := testClient(t, 200, `{"id":"image-id","url":"https://hcti.io/v1/store/image-id"}`, func(req *http.Request) {
+				if req.Method != "POST" || req.URL.EscapedPath() != tc.path || req.URL.RawQuery != "" {
+					t.Fatalf("unexpected route: %s %s", req.Method, req.URL)
 				}
-				got, err := c.CreateImage(context.Background(), input)
-				if err != nil || got.URL != "https://hcti.io/v1/store/image-id" {
-					t.Fatalf("result: %v, %v", got, err)
+				var body map[string]json.RawMessage
+				if err := json.NewDecoder(req.Body).Decode(&body); err != nil {
+					t.Fatal(err)
 				}
-				if r.TemplateID != "t-example" || r.TemplateVersion != tc.version {
-					t.Fatal("request mutated")
+				if len(body) != 2 || string(body["format"]) != `"png"` {
+					t.Fatalf("unexpected body: %v", body)
 				}
+				var values map[string]string
+				if err := json.Unmarshal(body["template_values"], &values); err != nil || values["title"] != "Hello 👩🏽‍💻" {
+					t.Fatalf("values: %v, %v", values, err)
+				}
+			})
+			got, err := c.CreateImage(context.Background(), r)
+			if err != nil || got.URL != "https://hcti.io/v1/store/image-id" {
+				t.Fatalf("result: %v, %v", got, err)
+			}
+			if r.TemplateID != "t-example" || r.TemplateVersion != tc.version {
+				t.Fatal("request mutated")
 			}
 		})
 	}
@@ -118,13 +112,45 @@ func TestCreateTemplatedImageRouteAndBody(t *testing.T) {
 
 func TestCreateTemplatedImageRejectsInvalidSelectors(t *testing.T) {
 	c := testClient(t, 200, "", func(*http.Request) { t.Fatal("invalid request reached transport") })
-	for _, r := range []TemplatedImageRequest{
+	for _, r := range []*TemplatedImageRequest{
 		{}, {TemplateID: "t-"}, {TemplateID: "not-a-template"},
 		{TemplateID: "t-example", TemplateVersion: Ptr(int64(0))},
 		{TemplateID: "t-example", TemplateVersion: Ptr(int64(-1))},
 	} {
 		if _, err := c.CreateImage(context.Background(), r); err == nil {
 			t.Fatal("accepted invalid selectors")
+		}
+	}
+}
+
+func TestCreateImageRejectsNilRequestsBeforeHTTP(t *testing.T) {
+	c := testClient(t, 200, "", func(*http.Request) { t.Fatal("nil request reached transport") })
+	for _, tc := range []struct {
+		name    string
+		request ImageRequest
+	}{
+		{"nil interface", nil},
+		{"nil HTML pointer", (*HTMLImageRequest)(nil)},
+		{"nil URL pointer", (*URLImageRequest)(nil)},
+		{"nil template pointer", (*TemplatedImageRequest)(nil)},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if _, err := c.CreateImage(context.Background(), tc.request); err == nil {
+				t.Fatal("accepted nil request")
+			}
+		})
+	}
+}
+
+func TestCreateImageAcceptsHTMLAndURLPointers(t *testing.T) {
+	for _, request := range []ImageRequest{&HTMLImageRequest{HTML: "hello"}, &URLImageRequest{URL: "https://example.com"}} {
+		c := testClient(t, 200, `{"id":"image-id","url":"https://hcti.io/v1/image/image-id"}`, func(r *http.Request) {
+			if r.Method != "POST" || r.URL.Path != "/v1/image" {
+				t.Fatal("incorrect creation route")
+			}
+		})
+		if _, err := c.CreateImage(context.Background(), request); err != nil {
+			t.Fatal(err)
 		}
 	}
 }

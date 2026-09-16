@@ -9,19 +9,19 @@ import (
 )
 
 func TestBatchExplicitEmptyOverridesAndDedupe(t *testing.T) {
-	defaults := URLImageRequest{
+	defaults := &URLImageRequest{
 		URL: "https://example.com", CSS: Ptr("body {color:red}"), Headers: map[string]string{"X-Test": "present"},
 		AdditionalHeaderOrigins: []string{"https://cdn.example.com"}, FullScreen: Ptr(true),
 		ImageOptions: ImageOptions{DedupeDurationSeconds: Ptr(60), Selector: Ptr(".card"), RenderOptions: RenderOptions{MSDelay: Ptr(10), ProxyID: Ptr("proxy")}},
 	}
-	empty := URLImageRequest{
+	empty := &URLImageRequest{
 		CSS: Ptr(""), Headers: map[string]string{}, AdditionalHeaderOrigins: []string{}, FullScreen: Ptr(false),
 		ImageOptions: ImageOptions{DedupeDurationSeconds: Ptr(0), Selector: Ptr(""), RenderOptions: RenderOptions{
 			MSDelay: Ptr(0), ProxyID: Ptr(""), StorageDestinationID: Ptr(""), Timezone: Ptr(""), ColorScheme: Ptr(ColorScheme("")), MediaType: Ptr(MediaType("")),
 		}},
 	}
-	html := HTMLImageRequest{CSS: Ptr(""), GoogleFonts: GoogleFonts{}, ImageOptions: ImageOptions{DedupeDurationSeconds: Ptr(120)}}
-	request := BatchRequest{DefaultOptions: &defaults, Variations: []ImageRequest{empty, &empty, html, &html, URLImageRequest{}, HTMLImageRequest{}}}
+	html := &HTMLImageRequest{CSS: Ptr(""), GoogleFonts: GoogleFonts{}, ImageOptions: ImageOptions{DedupeDurationSeconds: Ptr(120)}}
+	request := &BatchRequest{DefaultOptions: defaults, Variations: []ImageRequest{empty, html, &URLImageRequest{}, &HTMLImageRequest{}}}
 	c := testClient(t, 200, `{"images":[]}`, func(r *http.Request) {
 		var payload struct {
 			Defaults   map[string]any   `json:"default_options"`
@@ -38,18 +38,18 @@ func TestBatchExplicitEmptyOverridesAndDedupe(t *testing.T) {
 				t.Fatal("batch includes dedupe")
 			}
 		}
-		for _, item := range payload.Variations[:2] {
+		for _, item := range payload.Variations[:1] {
 			want := map[string]any{"css": "", "headers": map[string]any{}, "additional_header_origins": []any{}, "full_screen": false, "selector": "", "ms_delay": float64(0), "proxy_id": "", "storage_destination_id": "", "timezone": "", "color_scheme": "", "media_type": ""}
 			if !reflect.DeepEqual(item, want) {
 				t.Fatalf("got %#v, want %#v", item, want)
 			}
 		}
-		for _, item := range payload.Variations[2:4] {
+		for _, item := range payload.Variations[1:2] {
 			if !reflect.DeepEqual(item, map[string]any{"css": "", "google_fonts": ""}) {
 				t.Fatal(item)
 			}
 		}
-		for _, item := range payload.Variations[4:] {
+		for _, item := range payload.Variations[2:] {
 			if len(item) != 0 {
 				t.Fatal("omitted fields unexpectedly sent", item)
 			}
@@ -62,7 +62,7 @@ func TestBatchExplicitEmptyOverridesAndDedupe(t *testing.T) {
 		t.Fatal("caller requests were mutated")
 	}
 	// Single-image requests retain dedupe, including explicit zero.
-	for _, item := range []ImageRequest{defaults, &defaults, empty, &empty, html, &html} {
+	for _, item := range []ImageRequest{defaults, empty, html} {
 		data, err := json.Marshal(item)
 		if err != nil {
 			t.Fatal(err)
@@ -77,14 +77,12 @@ func TestBatchExplicitEmptyOverridesAndDedupe(t *testing.T) {
 	}
 }
 
-func TestBatchDedupeDefaultsValueAndPointer(t *testing.T) {
+func TestBatchDedupeDefaults(t *testing.T) {
 	for _, defaults := range []ImageRequest{
-		HTMLImageRequest{ImageOptions: ImageOptions{DedupeDurationSeconds: Ptr(10)}},
 		&HTMLImageRequest{ImageOptions: ImageOptions{DedupeDurationSeconds: Ptr(10)}},
-		URLImageRequest{ImageOptions: ImageOptions{DedupeDurationSeconds: Ptr(10)}},
 		&URLImageRequest{ImageOptions: ImageOptions{DedupeDurationSeconds: Ptr(10)}},
 	} {
-		data, err := json.Marshal(BatchRequest{DefaultOptions: defaults, Variations: []ImageRequest{defaults}})
+		data, err := json.Marshal(&BatchRequest{DefaultOptions: defaults, Variations: []ImageRequest{defaults}})
 		if err != nil {
 			t.Fatal(err)
 		}

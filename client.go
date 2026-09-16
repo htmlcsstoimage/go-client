@@ -2,24 +2,18 @@
 package hcti
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
-	"fmt"
-	"io"
 	"net/http"
 	"net/url"
-	"os"
-	"strings"
-	"time"
+
+	"github.com/htmlcsstoimage/go-client/internal/httpapi"
 )
 
 // Client is safe for concurrent use. Configure it before sharing it between goroutines.
 // Requests are never automatically retried: a failed create may already have succeeded.
 type Client struct {
-	apiID, apiKey string
-	baseURL       string
-	httpClient    *http.Client
+	config    httpapi.Config
+	transport *httpapi.Client
 }
 
 // Option configures a client.
@@ -28,34 +22,35 @@ type Option func(*Client)
 // WithHTTPClient supplies transport and timeout configuration. The client is copied;
 // redirects are disabled to avoid replaying credentials or writes at another endpoint.
 func WithHTTPClient(client *http.Client) Option {
-	return func(c *Client) {
-		if client != nil {
-			copied := *client
-			c.httpClient = &copied
-		}
-	}
+	return func(c *Client) { c.config.SetHTTPClient(client) }
 }
 
 // WithBaseURL overrides the API origin, for example for a local test server.
 func WithBaseURL(baseURL string) Option {
-	return func(c *Client) { c.baseURL = strings.TrimRight(baseURL, "/") }
+	return func(c *Client) { c.config.SetBaseURL(baseURL) }
+}
+
+// WithUserAgentSuffix appends an integration identifier, such as a provider name
+// and version, to the SDK's User-Agent. It does not replace HCTIGo/<version>.
+func WithUserAgentSuffix(suffix string) Option {
+	return func(c *Client) { c.config.AppendUserAgent(suffix) }
 }
 
 // NewClient constructs a client using HTTP Basic authentication.
 func NewClient(apiID, apiKey string, options ...Option) *Client {
-	c := &Client{apiID: apiID, apiKey: apiKey, baseURL: "https://hcti.io", httpClient: &http.Client{Timeout: 60 * time.Second}}
+	c := &Client{config: httpapi.NewConfig(apiID, apiKey, Version())}
 	for _, option := range options {
 		option(c)
 	}
-	c.httpClient.CheckRedirect = func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }
+	c.transport = httpapi.New(c.config)
 	return c
 }
 
 // NewClientFromEnv reads HCTI_API_ID and HCTI_API_KEY.
 func NewClientFromEnv(options ...Option) (*Client, error) {
-	id, key := os.Getenv("HCTI_API_ID"), os.Getenv("HCTI_API_KEY")
-	if id == "" || key == "" {
-		return nil, fmt.Errorf("hcti: HCTI_API_ID and HCTI_API_KEY are required")
+	id, key, err := httpapi.CredentialsFromEnv()
+	if err != nil {
+		return nil, err
 	}
 	return NewClient(id, key, options...), nil
 }
@@ -64,90 +59,18 @@ func NewClientFromEnv(options ...Option) (*Client, error) {
 func Ptr[T any](value T) *T { return &value }
 
 // ValidationError identifies a rejected request field.
-type ValidationError struct {
-	Path    string `json:"path"`
-	Message string `json:"message"`
-}
+type ValidationError = httpapi.ValidationError
 
-// APIError is returned for non-2xx responses. Headers include rate-limit metadata.
-// The response body is not included in Error(), to avoid accidentally logging secrets.
-type APIError struct {
-	StatusCode       int
-	Code             string
-	Message          string
-	ValidationErrors []ValidationError
-	Headers          http.Header
-}
-
-func (e *APIError) Error() string {
-	return fmt.Sprintf("hcti: API request failed (HTTP %d)", e.StatusCode)
-}
+// APIError describes a non-2xx response, including headers and validation details.
+// Error() excludes response contents so credentials are not accidentally logged.
+type APIError = httpapi.APIError
 
 func (c *Client) do(ctx context.Context, method, path string, query url.Values, body, result any) error {
-	var data []byte
-	var err error
-	if body != nil {
-		data, err = json.Marshal(body)
-		if err != nil {
-			return fmt.Errorf("hcti: encode request: %w", err)
-		}
-	}
-	endpoint := c.baseURL + path
-	if len(query) != 0 {
-		endpoint += "?" + query.Encode()
-	}
-	req, err := http.NewRequestWithContext(ctx, method, endpoint, bytes.NewReader(data))
-	if err != nil {
-		return fmt.Errorf("hcti: create request: %w", err)
-	}
-	req.SetBasicAuth(c.apiID, c.apiKey)
-	req.Header.Set("Accept", "application/json")
-	req.Header.Set("User-Agent", userAgent)
-	if body != nil {
-		req.Header.Set("Content-Type", "application/json")
-	}
-	resp, err := c.httpClient.Do(req)
-	if err != nil {
-		return fmt.Errorf("hcti: send request: %w", err)
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		var payload struct {
-			Error                  string            `json:"error"`
-			Message                string            `json:"message"`
-			ValidationErrors       []ValidationError `json:"validation_errors"`
-			LegacyValidationErrors []ValidationError `json:"validationErrors"`
-		}
-		// Edge errors may contain HTML instead of an API error document.
-		_ = json.NewDecoder(io.LimitReader(resp.Body, 1<<20)).Decode(&payload)
-		if payload.ValidationErrors == nil {
-			payload.ValidationErrors = payload.LegacyValidationErrors
-		}
-		return &APIError{StatusCode: resp.StatusCode, Code: payload.Error, Message: payload.Message, ValidationErrors: payload.ValidationErrors, Headers: resp.Header.Clone()}
-	}
-	if result == nil {
-		_, err = io.Copy(io.Discard, resp.Body)
-		return err
-	}
-	decoder := json.NewDecoder(resp.Body)
-	if err := decoder.Decode(result); err != nil {
-		return &ResponseError{StatusCode: resp.StatusCode, Problem: "expected a JSON response"}
-	}
-	var extra any
-	if err := decoder.Decode(&extra); err != io.EOF {
-		return &ResponseError{StatusCode: resp.StatusCode, Problem: "unexpected content after JSON response"}
-	}
+	var validate func() string
 	if value, ok := result.(interface{ validateResponse() string }); ok {
-		if problem := value.validateResponse(); problem != "" {
-			return &ResponseError{StatusCode: resp.StatusCode, Problem: problem}
-		}
+		validate = value.validateResponse
 	}
-	return nil
+	return c.transport.Do(ctx, method, path, query, body, result, validate)
 }
 
-func resourcePath(resource, id string) (string, error) {
-	if id == "" || id == "." || id == ".." {
-		return "", fmt.Errorf("hcti: a resource ID is required")
-	}
-	return "/v1/" + resource + "/" + url.PathEscape(id), nil
-}
+func resourcePath(resource, id string) (string, error) { return httpapi.ResourcePath(resource, id) }

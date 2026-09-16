@@ -43,7 +43,7 @@ func TestImageURLTransformations(t *testing.T) {
 				if got != want {
 					t.Fatalf("got %s; want %s", got, want)
 				}
-				template, err := c.GenerateTemplatedImageURL(TemplatedImageRequest{TemplateID: "tpl", Format: JPG}, options)
+				template, err := c.GenerateTemplatedImageURL(&TemplatedImageRequest{TemplateID: "tpl", Format: JPG}, options)
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -52,7 +52,7 @@ func TestImageURLTransformations(t *testing.T) {
 					effective = JPG
 				}
 				assertSignedQuery(t, template, "secret", effective, tc.query)
-				screenshot, err := c.GenerateCreateAndRenderURL(URLImageRequest{URL: "https://example.com", ImageOptions: ImageOptions{Format: JPG}}, options)
+				screenshot, err := c.GenerateCreateAndRenderURL(&URLImageRequest{URL: "https://example.com", ImageOptions: ImageOptions{Format: JPG}}, options)
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -73,7 +73,7 @@ func TestRenderOptionTemplateCollisions(t *testing.T) {
 		Horizontal:  &CropSpan{Start: &CropValue{0, CropPixels}, Size: &CropValue{50, CropPercent}},
 		AspectRatio: &AspectRatio{16, 9}, AspectRatioAxis: CropWidth, ComputedOrigin: CropCenter,
 	}}
-	got, err := c.GenerateTemplatedImageURL(TemplatedImageRequest{TemplateID: "tpl", TemplateValues: values}, options)
+	got, err := c.GenerateTemplatedImageURL(&TemplatedImageRequest{TemplateID: "tpl", TemplateValues: values}, options)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -84,14 +84,14 @@ func TestRenderOptionTemplateCollisions(t *testing.T) {
 	}
 	// Canonical and legacy size names each reserve their own override independently.
 	for _, pair := range []struct{ key, expected string }{{"crop_h", "__ro_crop_h"}, {"crop_height", "__ro_crop_height"}} {
-		got, err := c.GenerateTemplatedImageURL(TemplatedImageRequest{TemplateID: "tpl", TemplateValues: map[string]any{pair.key: nil}}, RenderImageOptions{Crop: &Crop{Vertical: &CropSpan{Size: &CropValue{100, CropPixels}}}})
+		got, err := c.GenerateTemplatedImageURL(&TemplatedImageRequest{TemplateID: "tpl", TemplateValues: map[string]any{pair.key: nil}}, RenderImageOptions{Crop: &Crop{Vertical: &CropSpan{Size: &CropValue{100, CropPixels}}}})
 		if err != nil {
 			t.Fatal(err)
 		}
 		assertSignedQuery(t, got, "secret", "", pair.expected+"=100px")
 	}
 	values["__ro_width"] = "ambiguous"
-	if _, err := c.GenerateTemplatedImageURL(TemplatedImageRequest{TemplateID: "tpl", TemplateValues: values}, options); err == nil {
+	if _, err := c.GenerateTemplatedImageURL(&TemplatedImageRequest{TemplateID: "tpl", TemplateValues: values}, options); err == nil {
 		t.Fatal("accepted ambiguous override collision")
 	}
 }
@@ -131,10 +131,10 @@ func TestInvalidRenderOptions(t *testing.T) {
 		if _, err := c.ImageURL("image", options); err == nil {
 			t.Fatalf("ImageURL accepted invalid case %d", i)
 		}
-		if _, err := c.GenerateTemplatedImageURL(TemplatedImageRequest{TemplateID: "tpl"}, options); err == nil {
+		if _, err := c.GenerateTemplatedImageURL(&TemplatedImageRequest{TemplateID: "tpl"}, options); err == nil {
 			t.Fatalf("template accepted invalid case %d", i)
 		}
-		if _, err := c.GenerateCreateAndRenderURL(URLImageRequest{URL: "https://example.com"}, options); err == nil {
+		if _, err := c.GenerateCreateAndRenderURL(&URLImageRequest{URL: "https://example.com"}, options); err == nil {
 			t.Fatalf("screenshot accepted invalid case %d", i)
 		}
 	}

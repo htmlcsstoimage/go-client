@@ -47,7 +47,7 @@ func TestScreenshotSigningUnicodeAndInvalidBytes(t *testing.T) {
 	for _, tc := range encodingCases {
 		for _, format := range []ImageFormat{"", PNG, JPG, WebP, PDF} {
 			t.Run(tc.name+"/"+string(format), func(t *testing.T) {
-				request := URLImageRequest{
+				request := &URLImageRequest{
 					URL: "https://example.com/?value=" + tc.value, CSS: Ptr("/*" + tc.value + "*/"),
 					Headers:      map[string]string{"X-Test": tc.value},
 					ImageOptions: ImageOptions{Format: format},
@@ -82,7 +82,7 @@ func TestTemplateSigningUnicodeValues(t *testing.T) {
 			if err := json.Unmarshal(encoded, &normalized); err != nil {
 				t.Fatal(err)
 			}
-			signed, err := c.GenerateTemplatedImageURL(TemplatedImageRequest{
+			signed, err := c.GenerateTemplatedImageURL(&TemplatedImageRequest{
 				TemplateID: "tpl", TemplateVersion: Ptr(int64(42)), Format: PNG,
 				TemplateValues: map[string]any{tc.value: tc.value},
 			})
@@ -101,7 +101,7 @@ func TestTemplateSigningStructuredValues(t *testing.T) {
 		"emoji": "👩🏽‍💻", "count": 42, "enabled": false, "omitted": nil,
 		"nested": map[string]any{"title": "漢 & café", "items": []any{"😀", "\xff", 0, false}},
 	}
-	signed, err := c.GenerateTemplatedImageURL(TemplatedImageRequest{TemplateID: "tpl", TemplateValues: values})
+	signed, err := c.GenerateTemplatedImageURL(&TemplatedImageRequest{TemplateID: "tpl", TemplateValues: values})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -119,7 +119,7 @@ func FuzzScreenshotSigning(f *testing.F) {
 	}
 	c := NewClient("test-id", "secret")
 	f.Fuzz(func(t *testing.T, value string) {
-		request := URLImageRequest{URL: "https://example.com/?q=" + value, CSS: Ptr(value)}
+		request := &URLImageRequest{URL: "https://example.com/?q=" + value, CSS: Ptr(value)}
 		signed, err := c.GenerateCreateAndRenderURL(request)
 		if err != nil {
 			t.Fatal(err)

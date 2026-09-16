@@ -23,7 +23,7 @@ func run() error {
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
 	defer cancel()
 
-	request := hcti.TemplateRequest{
+	request := &hcti.TemplateRequest{
 		Name:        "Go example social card",
 		Description: "A reusable card with a title and subtitle.",
 		HTML:        `<article><h1>{{title}}</h1><p>{{subtitle}}</p></article>`,
@@ -45,7 +45,7 @@ func run() error {
 	}
 	fmt.Println("New version:", updated.TemplateVersion)
 
-	image, err := client.CreateImage(ctx, hcti.TemplatedImageRequest{
+	image, err := client.CreateImage(ctx, &hcti.TemplatedImageRequest{
 		TemplateID:      updated.TemplateID,
 		TemplateVersion: hcti.Ptr(updated.TemplateVersion), // Omit to use the latest version.
 		TemplateValues:  map[string]any{"title": "A new release", "subtitle": "Built with Go and HTML/CSS to Image."},

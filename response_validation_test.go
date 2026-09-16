@@ -16,25 +16,25 @@ func TestRejectMalformedSuccessResponses(t *testing.T) {
 		valid   string
 	}{
 		{"image", func(c *Client) error {
-			_, err := c.CreateImage(context.Background(), HTMLImageRequest{HTML: "hello"})
+			_, err := c.CreateImage(context.Background(), &HTMLImageRequest{HTML: "hello"})
 			return err
 		},
 			[]string{`{}`, `null`, `[]`, `{"id":"image"}`, `{"url":"https://hcti.io/image"}`, `{"id":"image","url":"/relative"}`, `{"id":"image","url":"javascript:secret"}`, `{"id":"image","url":12}`, `{"id":" ","url":"https://hcti.io/image"}`},
 			`{"id":"image","url":"https://hcti.io/image","future_field":true}`},
 		{"batch", func(c *Client) error {
-			_, err := c.CreateImageBatch(context.Background(), BatchRequest{Variations: []ImageRequest{HTMLImageRequest{HTML: "hello"}}})
+			_, err := c.CreateImageBatch(context.Background(), &BatchRequest{Variations: []ImageRequest{&HTMLImageRequest{HTML: "hello"}}})
 			return err
 		},
 			[]string{`{}`, `null`, `{"images":null}`, `{"images":{}}`, `{"images":[null]}`, `{"images":[{}]}`, `{"images":[{"id":"ok","url":"https://hcti.io/ok"},{"id":"bad"}]}`},
 			`{"images":[{"id":"ok","url":"https://hcti.io/ok"}]}`},
 		{"template", func(c *Client) error {
-			_, err := c.CreateTemplate(context.Background(), TemplateRequest{HTML: "{{title}}"})
+			_, err := c.CreateTemplate(context.Background(), &TemplateRequest{HTML: "{{title}}"})
 			return err
 		},
 			[]string{`{}`, `null`, `{"template_id":"tpl"}`, `{"template_version":42}`, `{"template_id":"tpl","template_version":0}`, `{"template_id":"tpl","template_version":-1}`},
 			`{"template_id":"tpl","template_version":42}`},
 		{"version", func(c *Client) error {
-			_, err := c.CreateTemplateVersion(context.Background(), "tpl", TemplateRequest{HTML: "{{title}}"})
+			_, err := c.CreateTemplateVersion(context.Background(), "tpl", &TemplateRequest{HTML: "{{title}}"})
 			return err
 		},
 			[]string{`{}`, `null`, `{"template_id":"tpl","template_version":"42"}`},

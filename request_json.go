@@ -48,19 +48,17 @@ func (r BatchRequest) MarshalJSON() ([]byte, error) {
 
 func withoutDedupe(request ImageRequest) ImageRequest {
 	switch r := request.(type) {
-	case HTMLImageRequest:
-		r.DedupeDurationSeconds = nil
-		return r
-	case URLImageRequest:
-		r.DedupeDurationSeconds = nil
-		return r
 	case *HTMLImageRequest:
 		if r != nil {
-			return withoutDedupe(*r)
+			copy := *r
+			copy.DedupeDurationSeconds = nil
+			return &copy
 		}
 	case *URLImageRequest:
 		if r != nil {
-			return withoutDedupe(*r)
+			copy := *r
+			copy.DedupeDurationSeconds = nil
+			return &copy
 		}
 	}
 	return request

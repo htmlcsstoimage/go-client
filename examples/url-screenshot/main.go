@@ -23,7 +23,7 @@ func run() error {
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
 	defer cancel()
 
-	image, err := client.CreateImage(ctx, hcti.URLImageRequest{
+	image, err := client.CreateImage(ctx, &hcti.URLImageRequest{
 		URL:                 "https://example.com",
 		FullScreen:          hcti.Ptr(true),
 		BlockConsentBanners: hcti.Ptr(true),

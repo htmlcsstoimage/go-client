@@ -10,7 +10,7 @@ import (
 )
 
 func TestRenderQueryMatchesWireFields(t *testing.T) {
-	request := URLImageRequest{
+	request := &URLImageRequest{
 		URL:                         "https://example.com/?q=hello world&x=✓",
 		CSS:                         Ptr("body::before { content: \"<&>\"; }"),
 		Headers:                     map[string]string{"Z-Test": "last", "A-Test": "first"},
@@ -30,7 +30,7 @@ func TestRenderQueryMatchesWireFields(t *testing.T) {
 			},
 		},
 	}
-	for _, request := range []URLImageRequest{request, {URL: "https://example.com"}} {
+	for _, request := range []*URLImageRequest{request, {URL: "https://example.com"}} {
 		got, err := renderQueryForTest(request)
 		if err != nil {
 			t.Fatal(err)
@@ -90,7 +90,7 @@ func TestRenderQueryMatchesWireFields(t *testing.T) {
 
 func TestRenderQueryDeviceScale(t *testing.T) {
 	for _, value := range []float64{0, math.Copysign(0, -1), 0.1, 1.5, 3, 1e-9, 1e21} {
-		request := URLImageRequest{URL: "https://example.com", ImageOptions: ImageOptions{RenderOptions: RenderOptions{DeviceScale: &value}}}
+		request := &URLImageRequest{URL: "https://example.com", ImageOptions: ImageOptions{RenderOptions: RenderOptions{DeviceScale: &value}}}
 		query, err := renderQueryForTest(request)
 		if err != nil {
 			t.Fatal(err)
@@ -104,7 +104,7 @@ func TestRenderQueryDeviceScale(t *testing.T) {
 		}
 	}
 	for _, value := range []float64{math.NaN(), math.Inf(1), math.Inf(-1)} {
-		request := URLImageRequest{URL: "https://example.com", ImageOptions: ImageOptions{RenderOptions: RenderOptions{DeviceScale: &value}}}
+		request := &URLImageRequest{URL: "https://example.com", ImageOptions: ImageOptions{RenderOptions: RenderOptions{DeviceScale: &value}}}
 		if _, err := renderQueryForTest(request); err == nil {
 			t.Fatal("accepted nonfinite device scale")
 		}
@@ -112,7 +112,7 @@ func TestRenderQueryDeviceScale(t *testing.T) {
 }
 
 // Keep map decoding in tests only, as an independent oracle for buffer output.
-func renderQueryForTest(request URLImageRequest) (url.Values, error) {
+func renderQueryForTest(request *URLImageRequest) (url.Values, error) {
 	b, err := newSignedURLBuilder(nil, "https://hcti.io", "/test", request.Format)
 	if err != nil {
 		return nil, err

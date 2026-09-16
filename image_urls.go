@@ -29,7 +29,7 @@ func (c *Client) ImageURL(id string, options ...RenderImageOptions) (string, err
 		return "", err
 	}
 	var buffer [512]byte
-	b := signedURLBuilder{buf: append(buffer[:0], c.baseURL...)}
+	b := signedURLBuilder{buf: append(buffer[:0], c.config.BaseURL...)}
 	b.buf = append(b.buf, path...)
 	if render.Format != "" {
 		b.buf = append(b.buf, '.')

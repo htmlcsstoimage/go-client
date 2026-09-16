@@ -40,14 +40,14 @@ func TestTemplateScalarJSONCompatibility(t *testing.T) {
 				t.Fatal(err)
 			}
 		}
-		got, err := c.GenerateTemplatedImageURL(TemplatedImageRequest{TemplateID: "tpl", TemplateValues: map[string]any{"value": value}})
+		got, err := c.GenerateTemplatedImageURL(&TemplatedImageRequest{TemplateID: "tpl", TemplateValues: map[string]any{"value": value}})
 		if err != nil {
 			t.Fatalf("%T: %v", value, err)
 		}
 		assertSignedQuery(t, got, "secret", "", url.Values{"value": {text}}.Encode())
 	}
 	for _, value := range []any{math.NaN(), math.Inf(1), math.Inf(-1), float32(math.NaN()), float32(math.Inf(1)), json.Number("invalid"), make(chan int)} {
-		if _, err := c.GenerateTemplatedImageURL(TemplatedImageRequest{TemplateID: "tpl", TemplateValues: map[string]any{"value": value}}); err == nil {
+		if _, err := c.GenerateTemplatedImageURL(&TemplatedImageRequest{TemplateID: "tpl", TemplateValues: map[string]any{"value": value}}); err == nil {
 			t.Fatalf("accepted %T: %v", value, value)
 		}
 	}
@@ -70,7 +70,7 @@ func FuzzTemplateSigning(f *testing.F) {
 		if err := json.Unmarshal(data, &normalized); err != nil {
 			t.Fatal(err)
 		}
-		got, err := c.GenerateTemplatedImageURL(TemplatedImageRequest{TemplateID: "tpl", TemplateValues: map[string]any{key: value}, TemplateVersion: Ptr(int64(42))})
+		got, err := c.GenerateTemplatedImageURL(&TemplatedImageRequest{TemplateID: "tpl", TemplateValues: map[string]any{key: value}, TemplateVersion: Ptr(int64(42))})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -108,7 +108,7 @@ func TestTemplateSigningLargeMapMatchesPrevious(t *testing.T) {
 	values["omitted"] = nil
 	c := NewClient("id", "secret")
 	for _, format := range []ImageFormat{"", PNG, JPG, WebP, PDF} {
-		r := TemplatedImageRequest{TemplateID: "template/id", TemplateVersion: Ptr(int64(42)), TemplateValues: values, Format: format}
+		r := &TemplatedImageRequest{TemplateID: "template/id", TemplateVersion: Ptr(int64(42)), TemplateValues: values, Format: format}
 		want, err := legacyTemplateURL(c, r)
 		if err != nil {
 			t.Fatal(err)

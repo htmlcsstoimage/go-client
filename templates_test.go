@@ -12,14 +12,14 @@ func TestTemplateLifecycle(t *testing.T) {
 		call                         func(*Client) error
 	}{
 		{"create", "POST", "/v1/template", `{"template_id":"tpl","template_version":42}`, func(c *Client) error {
-			v, e := c.CreateTemplate(context.Background(), TemplateRequest{HTML: "{{title}}"})
+			v, e := c.CreateTemplate(context.Background(), &TemplateRequest{HTML: "{{title}}"})
 			if e == nil && v.TemplateVersion != 42 {
 				t.Fatal(v)
 			}
 			return e
 		}},
 		{"version", "POST", "/v1/template/tpl", `{"template_id":"tpl","template_version":43}`, func(c *Client) error {
-			_, e := c.CreateTemplateVersion(context.Background(), "tpl", TemplateRequest{HTML: "{{title}}"})
+			_, e := c.CreateTemplateVersion(context.Background(), "tpl", &TemplateRequest{HTML: "{{title}}"})
 			return e
 		}},
 		{"delete", "DELETE", "/v1/template/tpl", "", func(c *Client) error { return c.DeleteTemplate(context.Background(), "tpl") }},

@@ -8,4 +8,7 @@ import (
 //go:embed VERSION
 var versionFile string
 
-var userAgent = "HCTIGo/" + strings.TrimSpace(versionFile)
+var sdkVersion = strings.TrimSpace(versionFile)
+
+// Version returns the SDK version embedded at compile time from VERSION.
+func Version() string { return sdkVersion }

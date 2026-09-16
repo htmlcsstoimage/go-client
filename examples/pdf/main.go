@@ -24,7 +24,7 @@ func run() error {
 	defer cancel()
 
 	margin := hcti.PDFLength{Value: 12, Unit: hcti.Millimeters}
-	image, err := client.CreateImage(ctx, hcti.HTMLImageRequest{
+	image, err := client.CreateImage(ctx, &hcti.HTMLImageRequest{
 		HTML:        `<main><h1>Monthly report</h1><p>Revenue increased by 12% this month.</p><table><tr><th>Month</th><th>Revenue</th></tr><tr><td>September</td><td>$12,400</td></tr></table></main>`,
 		CSS:         hcti.Ptr(`body { font-family: 'Roboto'; color: #172554; } table { border-collapse: collapse; width: 100%; } th, td { padding: 12px; border: 1px solid #cbd5e1; text-align: left; } th { background: #eff6ff; }`),
 		GoogleFonts: hcti.GoogleFonts{"Roboto"},

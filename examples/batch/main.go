@@ -23,16 +23,16 @@ func run() error {
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
 	defer cancel()
 
-	result, err := client.CreateImageBatch(ctx, hcti.BatchRequest{
-		DefaultOptions: hcti.HTMLImageRequest{
+	result, err := client.CreateImageBatch(ctx, &hcti.BatchRequest{
+		DefaultOptions: &hcti.HTMLImageRequest{
 			HTML:         `<div class="card">One design. Three colors.</div>`,
 			GoogleFonts:  hcti.GoogleFonts{"Inter"},
 			ImageOptions: hcti.ImageOptions{Format: hcti.PNG},
 		},
 		Variations: []hcti.ImageRequest{
-			hcti.HTMLImageRequest{CSS: hcti.Ptr(`.card { width: 600px; padding: 48px; font: 32px 'Inter'; background: #dbeafe; color: #1e3a8a; }`)},
-			hcti.HTMLImageRequest{CSS: hcti.Ptr(`.card { width: 600px; padding: 48px; font: 32px 'Inter'; background: #dcfce7; color: #14532d; }`)},
-			hcti.HTMLImageRequest{CSS: hcti.Ptr(`.card { width: 600px; padding: 48px; font: 32px 'Inter'; background: #fce7f3; color: #831843; }`)},
+			&hcti.HTMLImageRequest{CSS: hcti.Ptr(`.card { width: 600px; padding: 48px; font: 32px 'Inter'; background: #dbeafe; color: #1e3a8a; }`)},
+			&hcti.HTMLImageRequest{CSS: hcti.Ptr(`.card { width: 600px; padding: 48px; font: 32px 'Inter'; background: #dcfce7; color: #14532d; }`)},
+			&hcti.HTMLImageRequest{CSS: hcti.Ptr(`.card { width: 600px; padding: 48px; font: 32px 'Inter'; background: #fce7f3; color: #831843; }`)},
 		},
 	})
 	if err != nil {

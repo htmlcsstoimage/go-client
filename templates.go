@@ -3,6 +3,7 @@ package hcti
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -100,12 +101,12 @@ type TemplatePage struct {
 }
 
 // CreateTemplate creates an HTML/CSS template and its initial version.
-func (c *Client) CreateTemplate(ctx context.Context, request TemplateRequest) (*TemplateVersion, error) {
+func (c *Client) CreateTemplate(ctx context.Context, request *TemplateRequest) (*TemplateVersion, error) {
 	return c.writeTemplate(ctx, "/v1/template", request)
 }
 
 // CreateTemplateVersion adds a version without replacing the template's stable ID.
-func (c *Client) CreateTemplateVersion(ctx context.Context, id string, request TemplateRequest) (*TemplateVersion, error) {
+func (c *Client) CreateTemplateVersion(ctx context.Context, id string, request *TemplateRequest) (*TemplateVersion, error) {
 	path, err := resourcePath("template", id)
 	if err != nil {
 		return nil, err
@@ -113,7 +114,10 @@ func (c *Client) CreateTemplateVersion(ctx context.Context, id string, request T
 	return c.writeTemplate(ctx, path, request)
 }
 
-func (c *Client) writeTemplate(ctx context.Context, path string, request TemplateRequest) (*TemplateVersion, error) {
+func (c *Client) writeTemplate(ctx context.Context, path string, request *TemplateRequest) (*TemplateVersion, error) {
+	if request == nil {
+		return nil, fmt.Errorf("hcti: template request is required")
+	}
 	var result TemplateVersion
 	if err := c.do(ctx, http.MethodPost, path, nil, request, &result); err != nil {
 		return nil, err

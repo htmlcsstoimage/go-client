@@ -4,18 +4,13 @@ import (
 	"fmt"
 	"net/url"
 	"strings"
+
+	"github.com/htmlcsstoimage/go-client/internal/httpapi"
 )
 
-// ResponseError indicates an invalid successful API response. The response body
-// is deliberately excluded from the error so it is safe to log.
-type ResponseError struct {
-	StatusCode int
-	Problem    string
-}
-
-func (e *ResponseError) Error() string {
-	return fmt.Sprintf("hcti: invalid API response (HTTP %d): %s", e.StatusCode, e.Problem)
-}
+// ResponseError indicates a malformed successful API response.
+// Its message excludes response contents.
+type ResponseError = httpapi.ResponseError
 
 func (r *Image) validateResponse() string {
 	if strings.TrimSpace(r.ID) == "" {

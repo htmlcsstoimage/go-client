@@ -19,6 +19,13 @@ go get github.com/htmlcsstoimage/go-client
 
 Import `github.com/htmlcsstoimage/go-client` and use the `hcti` package name, as shown below.
 
+Pass request payloads as pointers, for example `&hcti.HTMLImageRequest{...}`.
+The client does not modify requests; nil requests return an error. This convention
+also applies to templates, batches, signing requests, and management requests.
+Small option groups such as `RenderImageOptions` and list options are passed by value.
+Optional fields inside a request still use pointers to distinguish an omitted value
+from an explicit `false`, `0`, or empty string; use `hcti.Ptr(value)` to set them.
+
 ## Create an image
 
 ```go
@@ -35,7 +42,7 @@ func main() {
     client, err := hcti.NewClientFromEnv() // HCTI_API_ID and HCTI_API_KEY
     if err != nil { log.Fatal(err) }
 
-    image, err := client.CreateImage(context.Background(), hcti.HTMLImageRequest{
+    image, err := client.CreateImage(context.Background(), &hcti.HTMLImageRequest{
         HTML: "<h1>Hello from Go</h1>",
         CSS: hcti.Ptr("h1 { font-family: 'Open Sans'; }"),
         GoogleFonts: hcti.GoogleFonts{"Open Sans", "Roboto"},
@@ -58,7 +65,7 @@ Optional render fields use pointers: nil preserves API defaults; `hcti.Ptr(false
 ## URL screenshots and PDF options
 
 ```go
-image, err := client.CreateImage(ctx, hcti.URLImageRequest{
+image, err := client.CreateImage(ctx, &hcti.URLImageRequest{
     URL: "https://example.com",
     FullScreen: hcti.Ptr(true),
     ImageOptions: hcti.ImageOptions{
@@ -81,14 +88,14 @@ PDF units support pixels, inches, centimeters, and millimeters. Zero-value lengt
 ## Templates
 
 ```go
-version, err := client.CreateTemplate(ctx, hcti.TemplateRequest{
+version, err := client.CreateTemplate(ctx, &hcti.TemplateRequest{
     Name: "Social card",
     HTML: "<h1>{{title}}</h1>",
     GoogleFonts: hcti.GoogleFonts{"Roboto"},
 })
 if err != nil { return err }
 
-image, err := client.CreateImage(ctx, hcti.TemplatedImageRequest{
+image, err := client.CreateImage(ctx, &hcti.TemplatedImageRequest{
     TemplateID: version.TemplateID,
     TemplateVersion: hcti.Ptr(version.TemplateVersion),
     TemplateValues: map[string]any{"title": "Hello"},
@@ -108,15 +115,15 @@ Listing returns common fields plus `Template.Raw`, which retains the complete JS
 A nil CSS pointer, map, or slice inherits the batch default. Use `CSS: hcti.Ptr("")`, `Headers: map[string]string{}`, `AdditionalHeaderOrigins: []string{}`, or `GoogleFonts: hcti.GoogleFonts{}` to explicitly clear that default:
 
 ```go
-batch, err := client.CreateImageBatch(ctx, hcti.BatchRequest{
-    DefaultOptions: hcti.HTMLImageRequest{
+batch, err := client.CreateImageBatch(ctx, &hcti.BatchRequest{
+    DefaultOptions: &hcti.HTMLImageRequest{
         HTML: "<h1>Hello</h1>",
         CSS: hcti.Ptr("h1 { color: red; }"),
         GoogleFonts: hcti.GoogleFonts{"Roboto"},
     },
     Variations: []hcti.ImageRequest{
-        hcti.HTMLImageRequest{}, // Inherits CSS and fonts.
-        hcti.HTMLImageRequest{CSS: hcti.Ptr(""), GoogleFonts: hcti.GoogleFonts{}},
+        &hcti.HTMLImageRequest{}, // Inherits CSS and fonts.
+        &hcti.HTMLImageRequest{CSS: hcti.Ptr(""), GoogleFonts: hcti.GoogleFonts{}},
     },
 })
 ```
@@ -198,3 +205,9 @@ Run the URL generation benchmarks:
 ```sh
 go test -run '^$' -bench BenchmarkGenerate -benchmem
 ```
+
+## Management API
+
+The `github.com/htmlcsstoimage/go-client/management` package is experimental and intended primarily for our Terraform and Pulumi providers. It is publicly importable, but is not recommended for general application use yet; its API may change as the IaC integrations develop. It ships in this module with the same version and release.
+
+Use the root `hcti` package for application image creation, templates, and signing. See the [management guide](management/README.md) for integration details.

@@ -35,7 +35,8 @@ type ImageOptions struct {
 	PDFOptions *PDFOptions `json:"pdf_options,omitempty"`
 }
 
-// ImageRequest accepts one of HTMLImageRequest, URLImageRequest, or TemplatedImageRequest.
+// ImageRequest accepts a non-nil *HTMLImageRequest, *URLImageRequest, or
+// *TemplatedImageRequest. Request values do not implement this interface.
 type ImageRequest interface{ imageRequest() }
 
 // HTMLImageRequest creates an image from HTML markup and optional CSS.
@@ -53,7 +54,7 @@ type HTMLImageRequest struct {
 	GoogleFonts GoogleFonts `json:"google_fonts,omitempty"`
 }
 
-func (HTMLImageRequest) imageRequest() {}
+func (*HTMLImageRequest) imageRequest() {}
 
 // URLImageRequest creates a screenshot of a webpage.
 type URLImageRequest struct {
@@ -87,7 +88,7 @@ type URLImageRequest struct {
 	BlockConsentBanners *bool `json:"block_consent_banners,omitempty"`
 }
 
-func (URLImageRequest) imageRequest() {}
+func (*URLImageRequest) imageRequest() {}
 
 // TemplatedImageRequest renders a saved template using variable values.
 type TemplatedImageRequest struct {
@@ -107,4 +108,4 @@ type TemplatedImageRequest struct {
 	Format ImageFormat `json:"format,omitempty"`
 }
 
-func (TemplatedImageRequest) imageRequest() {}
+func (*TemplatedImageRequest) imageRequest() {}

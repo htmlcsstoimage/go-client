@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"reflect"
 	"strconv"
 	"strings"
 )
@@ -19,16 +18,27 @@ type Image struct {
 
 // CreateImage creates an image definition and returns its render URL.
 func (c *Client) CreateImage(ctx context.Context, request ImageRequest) (*Image, error) {
-	if request == nil || (reflect.ValueOf(request).Kind() == reflect.Ptr && reflect.ValueOf(request).IsNil()) {
+	if request == nil {
 		return nil, fmt.Errorf("hcti: image request is required")
 	}
 	path := "/v1/image"
 	var template *TemplatedImageRequest
 	switch r := request.(type) {
-	case TemplatedImageRequest:
-		template = &r
+	case *HTMLImageRequest:
+		if r == nil {
+			return nil, fmt.Errorf("hcti: image request is required")
+		}
+	case *URLImageRequest:
+		if r == nil {
+			return nil, fmt.Errorf("hcti: image request is required")
+		}
 	case *TemplatedImageRequest:
+		if r == nil {
+			return nil, fmt.Errorf("hcti: image request is required")
+		}
 		template = r
+	default:
+		return nil, fmt.Errorf("hcti: unsupported image request type")
 	}
 	if template != nil {
 		if !strings.HasPrefix(template.TemplateID, "t-") || len(template.TemplateID) == 2 {
@@ -71,7 +81,10 @@ type BatchResult struct {
 
 // CreateImageBatch creates HTML or URL variations with optional shared defaults.
 // Templated requests are rejected.
-func (c *Client) CreateImageBatch(ctx context.Context, request BatchRequest) (*BatchResult, error) {
+func (c *Client) CreateImageBatch(ctx context.Context, request *BatchRequest) (*BatchResult, error) {
+	if request == nil {
+		return nil, fmt.Errorf("hcti: batch request is required")
+	}
 	if len(request.Variations) == 0 {
 		return &BatchResult{Images: []Image{}}, nil
 	}
@@ -81,7 +94,6 @@ func (c *Client) CreateImageBatch(ctx context.Context, request BatchRequest) (*B
 	}
 	for _, item := range requests {
 		switch v := item.(type) {
-		case HTMLImageRequest, URLImageRequest:
 		case *HTMLImageRequest:
 			if v == nil {
 				return nil, fmt.Errorf("hcti: batch request must not be nil")

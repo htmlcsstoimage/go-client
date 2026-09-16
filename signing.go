@@ -13,7 +13,10 @@ import (
 // GenerateTemplatedImageURL signs template values without making an API request.
 // Anyone with the resulting URL can render it. Do not put confidential values in URLs.
 // Optional render options crop or resize the result and override the request format.
-func (c *Client) GenerateTemplatedImageURL(request TemplatedImageRequest, options ...RenderImageOptions) (string, error) {
+func (c *Client) GenerateTemplatedImageURL(request *TemplatedImageRequest, options ...RenderImageOptions) (string, error) {
+	if request == nil {
+		return "", fmt.Errorf("hcti: template request is required")
+	}
 	path, err := resourcePath("image", request.TemplateID)
 	if err != nil {
 		return "", err
@@ -23,7 +26,7 @@ func (c *Client) GenerateTemplatedImageURL(request TemplatedImageRequest, option
 		return "", err
 	}
 	var buffer [512]byte
-	builder, err := newSignedURLBuilder(buffer[:0], c.baseURL, path, render.Format)
+	builder, err := newSignedURLBuilder(buffer[:0], c.config.BaseURL, path, render.Format)
 	if err != nil {
 		return "", err
 	}
@@ -55,13 +58,16 @@ func (c *Client) GenerateTemplatedImageURL(request TemplatedImageRequest, option
 	if err := render.appendQuery(&builder, request.TemplateValues); err != nil {
 		return "", err
 	}
-	return builder.finish(c.apiKey), nil
+	return builder.finish(c.config.APIKey), nil
 }
 
 // GenerateCreateAndRenderURL signs a URL screenshot request without calling the API.
 // PDF options and dedupe duration are not supported by this signed-URL helper.
 // Optional render options crop or resize the result and override the request format.
-func (c *Client) GenerateCreateAndRenderURL(request URLImageRequest, options ...RenderImageOptions) (string, error) {
+func (c *Client) GenerateCreateAndRenderURL(request *URLImageRequest, options ...RenderImageOptions) (string, error) {
+	if request == nil {
+		return "", fmt.Errorf("hcti: URL request is required")
+	}
 	if request.URL == "" {
 		return "", fmt.Errorf("hcti: URL is required")
 	}
@@ -70,7 +76,7 @@ func (c *Client) GenerateCreateAndRenderURL(request URLImageRequest, options ...
 		return "", err
 	}
 	var buffer [1024]byte
-	builder, err := newSignedURLBuilder(buffer[:0], c.baseURL, "/v1/image/create-and-render/"+url.PathEscape(c.apiID), render.Format)
+	builder, err := newSignedURLBuilder(buffer[:0], c.config.BaseURL, "/v1/image/create-and-render/"+url.PathEscape(c.config.APIID), render.Format)
 	if err != nil {
 		return "", err
 	}
@@ -80,7 +86,7 @@ func (c *Client) GenerateCreateAndRenderURL(request URLImageRequest, options ...
 	if err := render.appendQuery(&builder, nil); err != nil {
 		return "", err
 	}
-	return builder.finish(c.apiKey), nil
+	return builder.finish(c.config.APIKey), nil
 }
 
 // appendTemplateValue avoids JSON serialization for ordinary scalar values.
