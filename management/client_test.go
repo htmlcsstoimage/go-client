@@ -63,10 +63,10 @@ func TestResourceRoutes(t *testing.T) {
 		}},
 		{"delete storage", "DELETE", "/v1/storage-destinations/storage-id", "", func(c *m.Client) error { return c.DeleteStorageDestination(ctx, "storage-id") }},
 		{"list storage", "GET", "/v1/storage-destinations", `{"data":[]}`, func(c *m.Client) error { _, e := c.ListStorageDestinations(ctx, m.ListOptions{}); return e }},
-		{"external ID", "GET", "/v1/storage-destinations/aws-external-id", `{"external_id":"org-external"}`, func(c *m.Client) error {
+		{"external ID", "GET", "/v1/storage-destinations/aws-external-id", `{"external_id":"org-external","writer_role_arn":"arn:aws:iam::123456789012:role/hcti-writer"}`, func(c *m.Client) error {
 			v, e := c.GetAWSExternalID(ctx)
-			if e == nil && v.ExternalID != "org-external" {
-				t.Error("lost external ID")
+			if e == nil && (v.ExternalID != "org-external" || v.WriterRoleARN != "arn:aws:iam::123456789012:role/hcti-writer") {
+				t.Error("lost AWS trust policy details")
 			}
 			return e
 		}},

@@ -41,19 +41,25 @@ func (v *StorageDestination) validateResponse() string {
 	return v.ConnectionInfo.validateResponse()
 }
 
-// AWSExternalID contains the organization's external ID for an AWS role trust policy.
+// AWSExternalID contains the external ID and HCTI principal for an AWS role trust policy.
 type AWSExternalID struct {
+	// ExternalID is the organization-specific sts:ExternalId condition value.
 	ExternalID string `json:"external_id"`
+	// WriterRoleARN is the HCTI IAM role to allow as the trust policy's AWS principal.
+	WriterRoleARN string `json:"writer_role_arn"`
 }
 
 func (v *AWSExternalID) validateResponse() string {
 	if v.ExternalID == "" {
 		return "missing AWS external ID"
 	}
+	if v.WriterRoleARN == "" {
+		return "missing AWS writer role ARN"
+	}
 	return ""
 }
 
-// GetAWSExternalID reads the organization's external ID without creating a destination.
+// GetAWSExternalID reads the organization's external ID and HCTI writer role ARN without creating a destination.
 func (c *Client) GetAWSExternalID(ctx context.Context) (*AWSExternalID, error) {
 	var result AWSExternalID
 	if err := c.do(ctx, http.MethodGet, "/v1/storage-destinations/aws-external-id", nil, nil, &result); err != nil {

@@ -27,6 +27,7 @@ func TestMalformedResourceResponses(t *testing.T) {
 		{"storage missing role", strings.Replace(storageJSON, `"role_arn":"arn:aws:iam::123:role/hcti"`, `"role_arn":null`, 1), func(c *m.Client) error { _, e := c.GetStorageDestination(ctx, "id"); return e }},
 		{"unknown OG", strings.Replace(ogJSON, `"config_type":"templated"`, `"config_type":"unrecognized"`, 1), func(c *m.Client) error { _, e := c.GetOGConfig(ctx, "id"); return e }},
 		{"missing OG selector", strings.Replace(ogJSON, `"template_id":"t-example"`, `"template_id":null`, 1), func(c *m.Client) error { _, e := c.GetOGConfig(ctx, "id"); return e }},
+		{"missing writer role ARN", `{"external_id":"org-external"}`, func(c *m.Client) error { _, e := c.GetAWSExternalID(ctx); return e }},
 		{"missing external ID", `{}`, func(c *m.Client) error { _, e := c.GetAWSExternalID(ctx); return e }},
 	} {
 		t.Run(tc.name, func(t *testing.T) {

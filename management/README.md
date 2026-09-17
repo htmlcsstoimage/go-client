@@ -81,3 +81,5 @@ Errors support `errors.As` with either package's `APIError` and `ResponseError` 
 `CreateImageDefinition` supports `html_css`, `url`, and `templated` with typed `RenderDefinition` fields. It saves a definition without rendering, sends nullable inputs as explicit null, and disables deduplication so each create owns a distinct image. `GetImageMetadata` reads `/v1/images/{id}`; `DeleteImageDefinition` accepts asynchronous deletion. Template selectors are URL parameters, not request body fields.
 
 `SaveTemplateDefinition` creates a template when its ID argument is empty, or creates a version under an existing ID. `GetTemplateDefinition` accepts nil for latest or searches the version listing for an exact int64 version. `DeleteTemplateDefinition` removes all versions. These methods share the existing transport and authentication. Use the root package for ordinary application image creation, templates, and signing.
+
+`GetAWSExternalID` returns `ExternalID` for the trust policy's `sts:ExternalId` condition and `WriterRoleARN` for its AWS principal. The storage destination's role ARN is the role you create in your own AWS account.
