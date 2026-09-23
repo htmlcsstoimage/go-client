@@ -39,8 +39,9 @@ type RenderOptions struct {
 	// RenderWhenReady waits for JavaScript to call ScreenshotReady().
 	// The image fails if the readiness signal is never sent. Nil uses the API default.
 	RenderWhenReady *bool `json:"render_when_ready,omitempty"`
-	// DisableTwemoji disables the Twemoji fallback and renders emoji with native fonts.
-	// Nil uses the API default; Ptr(false) explicitly enables the fallback.
+	// DisableTwemoji controls Twemoji replacement. HTML/CSS and template images use
+	// Twemoji by default; Ptr(true) disables it. URL images inject Twemoji only
+	// with Ptr(false); nil or Ptr(true) leaves the page's emoji handling unchanged.
 	DisableTwemoji *bool `json:"disable_twemoji,omitempty"`
 	// ColorScheme sets Chrome's preferred color scheme to Light or Dark.
 	// Nil leaves the API default unchanged; use Ptr(Dark) or Ptr(Light).

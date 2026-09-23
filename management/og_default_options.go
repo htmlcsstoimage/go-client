@@ -29,7 +29,7 @@ type OGDefaultImageOptions struct {
 	// ViewportWidth Sets the width of Chrome's viewport and disables automatic cropping.
 	// Minimum: 1. Maximum: 6000. Both viewport dimensions must be supplied together.
 	ViewportWidth *int32 `json:"viewport_width"`
-	// DisableTwemoji Disables the Twemoji fallback and renders emoji using native fonts instead.
+	// DisableTwemoji injects Twemoji into the captured URL only when explicitly false; nil or true leaves the page unchanged.
 	DisableTwemoji *bool `json:"disable_twemoji"`
 	// ColorScheme Sets Chrome's preferred color scheme. Valid values: light or dark.
 	ColorScheme *hcti.ColorScheme `json:"color_scheme"`

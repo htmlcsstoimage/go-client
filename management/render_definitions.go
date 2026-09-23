@@ -33,7 +33,7 @@ type RenderDefinition struct {
 	ViewportHeight *int64 `json:"viewport_height"`
 	// ViewportWidth Sets the width of Chrome's viewport and disables automatic cropping. Minimum: 1. Maximum: 6000. Both viewport dimensions must be supplied together.
 	ViewportWidth *int64 `json:"viewport_width"`
-	// DisableTwemoji Disables the Twemoji fallback and renders emoji using native fonts instead.
+	// DisableTwemoji: HTML/CSS and template images use Twemoji by default; true disables it. URL images inject Twemoji only with explicit false; nil or true leaves the page unchanged.
 	DisableTwemoji *bool `json:"disable_twemoji"`
 	// ColorScheme Rendering option.
 	ColorScheme *string `json:"color_scheme"`
