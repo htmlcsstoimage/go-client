@@ -19,6 +19,9 @@ const (
 // RenderOptions are shared by HTML, URL, and HTML template requests.
 // Nil pointers leave the API default intact; Ptr(false) and Ptr(0) send explicit values.
 type RenderOptions struct {
+	// RequestOverrides blocks matching browser network requests on paid plans.
+	// Nil omits the field; an empty slice clears inherited batch rules.
+	RequestOverrides []RequestOverride `json:"request_overrides,omitempty"`
 	// DeviceScale controls the screenshot pixel ratio, from 0.1 to 3.
 	// HTML and template renders default to 2; URL renders default to 1.
 	// Nil uses the API default.

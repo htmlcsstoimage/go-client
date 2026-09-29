@@ -3,12 +3,16 @@ package management
 import (
 	"encoding/json"
 	"strconv"
+
+	hcti "github.com/htmlcsstoimage/go-client"
 )
 
 // RenderDefinition contains saved rendering inputs. Methods select the fields
 // supported by their endpoint and serialize absent nullable inputs as JSON null.
 // TemplateID and TemplateVersion select a template through the URL, never the body.
 type RenderDefinition struct {
+	// RequestOverrides blocks matching browser network requests on paid plans.
+	RequestOverrides []hcti.RequestOverride `json:"request_overrides"`
 	// HTML HTML to render and take a screenshot of. HTML fragments are rendered in a wrapper document unless a complete HTML document is supplied. Required for HTML image requests.
 	HTML *string `json:"html"`
 	// Name The name of the template, used to identify it in your account. Maximum: 64 characters.

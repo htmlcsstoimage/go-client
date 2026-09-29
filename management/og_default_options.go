@@ -5,6 +5,8 @@ import hcti "github.com/htmlcsstoimage/go-client"
 // OGDefaultImageOptions contains only options supported by HTML/CSS OG configs.
 // Nil fields are sent as JSON null, leaving their effective defaults to the API.
 type OGDefaultImageOptions struct {
+	// RequestOverrides blocks matching browser network requests on paid plans.
+	RequestOverrides []hcti.RequestOverride `json:"request_overrides"`
 	// CSS CSS injected into the loaded page to override its styles.
 	CSS *string `json:"css"`
 	// DeviceScale Adjusts the pixel ratio used for the screenshot. Minimum: 0.1. Maximum: 3.
