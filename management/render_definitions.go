@@ -214,6 +214,7 @@ func (v RenderDefinition) payload(kind string) map[string]any {
 	switch kind {
 	case "template":
 		return map[string]any{
+			"request_overrides":      v.RequestOverrides,
 			"html":                   v.HTML,
 			"name":                   v.Name,
 			"description":            v.Description,
@@ -241,6 +242,7 @@ func (v RenderDefinition) payload(kind string) map[string]any {
 		}
 	case "html_css":
 		return map[string]any{
+			"request_overrides":      v.RequestOverrides,
 			"html":                   v.HTML,
 			"css":                    v.CSS,
 			"device_scale":           v.DeviceScale,
@@ -271,6 +273,7 @@ func (v RenderDefinition) payload(kind string) map[string]any {
 		}
 	case "url":
 		return map[string]any{
+			"request_overrides":              v.RequestOverrides,
 			"url":                            v.URL,
 			"css":                            v.CSS,
 			"device_scale":                   v.DeviceScale,

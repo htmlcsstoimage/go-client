@@ -8,6 +8,8 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	hcti "github.com/htmlcsstoimage/go-client"
 )
 
 func TestDefinitionWireContracts(t *testing.T) {
@@ -22,6 +24,9 @@ func TestDefinitionWireContracts(t *testing.T) {
 					t.Error(r.Method)
 				}
 				if kind == "templated" {
+					if _, ok := body["request_overrides"]; ok {
+						t.Error("templated image body must not include request overrides")
+					}
 					if r.URL.Path != "/v1/image/t-test/9007199254740993" {
 						t.Error(r.URL.Path)
 					}
@@ -35,6 +40,9 @@ func TestDefinitionWireContracts(t *testing.T) {
 						t.Error(string(body["template_values"]))
 					}
 				} else {
+					if string(body["request_overrides"]) != `[{"action":"block","url":"*.js","resource_types":["script","image_set"]}]` {
+						t.Errorf("request overrides omitted or changed: %s", body["request_overrides"])
+					}
 					for _, k := range []string{"css", "device_scale", "viewport_width", "viewport_height", "selector", "proxy_id", "storage_destination_id", "jumbo_max_width", "jumbo_max_height", "transparent_background"} {
 						if string(body[k]) != "null" {
 							t.Errorf("%s must be explicit null: %s", k, body[k])
@@ -62,7 +70,7 @@ func TestDefinitionWireContracts(t *testing.T) {
 			version := int64(9007199254740993)
 			zero := int64(0)
 			off := false
-			request := &RenderDefinition{TemplateID: &id, TemplateVersion: &version, MSDelay: &zero, RenderWhenReady: &off, TemplateValues: json.RawMessage(`{"n":9007199254740993,"emoji":"😀","nested":[false,null]}`)}
+			request := &RenderDefinition{TemplateID: &id, TemplateVersion: &version, MSDelay: &zero, RenderWhenReady: &off, TemplateValues: json.RawMessage(`{"n":9007199254740993,"emoji":"😀","nested":[false,null]}`), RequestOverrides: []hcti.RequestOverride{{Action: hcti.RequestOverrideBlock, URL: hcti.Ptr("*.js"), ResourceTypes: []hcti.RequestOverrideResourceType{hcti.ResourceScript, hcti.ResourceImageSet}}}}
 			var err error
 			if kind == "template" {
 				var v *CreatedRender
