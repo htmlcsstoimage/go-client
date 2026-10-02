@@ -110,7 +110,7 @@ Listing returns common fields plus `Template.Raw`, which retains the complete JS
 
 ## Batches and deletion
 
-`CreateImageBatch` accepts a `BatchRequest` containing HTML/URL `Variations` and optional `DefaultOptions`. Omitted HTML/URL fields let variations inherit defaults. Templated image batches are not supported. Empty batches return locally without making an HTTP request. Deduplication settings are excluded from defaults and every variation without modifying the input requests.
+`CreateImageBatch` accepts a `BatchRequest` containing HTML/URL `Variations` and optional `DefaultOptions`. Omitted HTML/URL fields let variations inherit defaults. Use `CreateTemplatedImageBatch` for templated image batches. Empty batches return locally without making an HTTP request. Deduplication settings are excluded from defaults and every variation without modifying the input requests.
 
 A nil CSS pointer, map, or slice inherits the batch default. Use `CSS: hcti.Ptr("")`, `Headers: map[string]string{}`, `AdditionalHeaderOrigins: []string{}`, or `GoogleFonts: hcti.GoogleFonts{}` to explicitly clear that default:
 
@@ -211,3 +211,21 @@ go test -run '^$' -bench BenchmarkGenerate -benchmem
 The `github.com/htmlcsstoimage/go-client/management` package is experimental and intended primarily for our Terraform and Pulumi providers. It is publicly importable, but is not recommended for general application use yet; its API may change as the IaC integrations develop. It ships in this module with the same version and release.
 
 Use the root `hcti` package for application image creation, templates, and signing. See the [management guide](management/README.md) for integration details.
+
+## Templated image batches
+
+Create images from one or more templates with shared defaults and ordered variations:
+
+```go
+result, err := client.CreateTemplatedImageBatch(ctx, &hcti.TemplatedBatchRequest{
+    DefaultOptions: &hcti.TemplatedBatchImageOptions{TemplateID: "t-card", TemplateVersion: hcti.Ptr(int64(3)), Format: hcti.WebP},
+    Variations: []hcti.TemplatedBatchImageOptions{
+        {TemplateValues: map[string]any{"title": "First"}},
+        {TemplateID: "t-other", TemplateValues: map[string]any{"title": "Second"}},
+    },
+})
+```
+
+Omitted fields inherit defaults. Supplying a template ID resets the inherited version; omit its version to use latest. Template value objects merge recursively on the API; arrays, scalars, and explicit null values replace defaults. Results preserve input order and identical images reuse existing assets. Each merged values object must be nonempty and satisfy its template's required variables.
+
+See the [API reference](https://docs.htmlcsstoimage.com/getting-started/using-the-api/#batch-templated-image-creation) for plan limits and examples.
