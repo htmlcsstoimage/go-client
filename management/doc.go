@@ -1,4 +1,4 @@
-// Package management provides clients for API keys, proxies, storage destinations,
+// Package management provides clients for API keys, webhooks, proxies, storage destinations,
 // Open Graph configurations, and provider-oriented rendering definitions.
 //
 // This package is experimental and intended primarily for the official Terraform

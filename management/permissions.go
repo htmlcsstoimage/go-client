@@ -25,4 +25,7 @@ const (
 	PermissionTemplatesDelete                 Permission = "templates:delete"
 	PermissionTemplatesRead                   Permission = "templates:read"
 	PermissionUsageRead                       Permission = "usage:read"
+	PermissionWebhooksCreateUpdate            Permission = "webhooks:create_update"
+	PermissionWebhooksDelete                  Permission = "webhooks:delete"
+	PermissionWebhooksRead                    Permission = "webhooks:read"
 )

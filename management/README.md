@@ -34,12 +34,15 @@ See the [runnable pagination example](../examples/management/main.go) and [packa
 | --- | --- |
 | API keys | `CreateAPIKey`, `GetAPIKey`, `ListAPIKeys`, `UpdateAPIKey`, `DeleteAPIKey` |
 | Proxies | `CreateProxy`, `GetProxy`, `ListProxies`, `UpdateProxy`, `DeleteProxy` |
+| Webhooks | `CreateWebhook`, `GetWebhook`, `ListWebhooks`, `UpdateWebhook`, `DeleteWebhook` |
 | Storage destinations | `CreateStorageDestination`, `GetStorageDestination`, `ListStorageDestinations`, `UpdateStorageDestination`, `DeleteStorageDestination`, `GetAWSExternalID` |
 | OG configs | `CreateOGConfig`, `GetOGConfig`, `ListOGConfigs`, `UpdateOGConfig`, `DeleteOGConfig` |
 
 List methods fetch one page. Pass `Pagination.NextPageStart` as the next request's `PageStart`; nil ends pagination. API key lists also support `IncludeDisabled` and an all-of `WithPermission` filter.
 
 ## Updates and secrets
+
+`CreateWebhook` returns `SigningSecret` once, even when signing is disabled. Store it securely for the receiver; update, get, and list responses leave it nil. The IaC providers preserve this creation-only secret in sensitive state.
 
 Updates replace editable settings. Send the complete desired configuration. Nullable request fields serialize nil as JSON null, while explicit false, zero, empty strings, maps, and slices remain distinct. Nonnullable optional OG settings (`OptimizationMode`, `RefreshIntervalSeconds`) are omitted when nil so the API chooses their defaults. The SDK does not fill rendering defaults or automatically retain secrets.
 
