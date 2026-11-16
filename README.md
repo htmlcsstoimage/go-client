@@ -130,6 +130,66 @@ batch, err := client.CreateImageBatch(ctx, &hcti.BatchRequest{
 
 Use `DeleteImage` or `DeleteImageBatch` to delete images. Successful deletion returns a nil error, including responses with no body.
 
+## Recordings
+
+Use `CreateRecording` with `*HTMLRecordingRequest` or `*URLRecordingRequest` to record HTML/CSS or a public webpage as MP4, WebM, or GIF:
+
+```go
+recording, err := client.CreateRecording(ctx, &hcti.URLRecordingRequest{
+    URL: "https://example.com",
+    RecordingOptions: hcti.RecordingOptions{
+        DurationMS: 10000,
+        ViewportWidth: hcti.Ptr(1280),
+        ViewportHeight: hcti.Ptr(720),
+        Actions: []hcti.RecordingAction{hcti.RecordingSimpleScrollAction{}},
+        Output: &hcti.RecordingOutputOptions{Format: hcti.Ptr(hcti.RecordingFormatMP4)},
+    },
+})
+if err != nil {
+    return err
+}
+fmt.Println(recording.RecordingURL)
+status, err := client.FetchRecordingStatus(ctx, recording.ID)
+if err != nil {
+    return err
+}
+fmt.Println(status.Status)
+```
+
+For HTML/CSS, use `&hcti.HTMLRecordingRequest{HTML: "<h1>Hello</h1>", RecordingOptions: hcti.RecordingOptions{DurationMS: 3000}}`. Both sources share browser settings, triggers, timeline actions, and output options. Optional scalar fields use pointers; use `hcti.Ptr(false)` or `hcti.Ptr(0)` to send explicit values.
+
+Actions and triggers use typed structs, such as `hcti.RecordingClickAction{Selector: "#start"}` and `hcti.RecordingElementVisibleTrigger{Selector: "#ready"}`. The client writes their API discriminators. For JavaScript actions, nil `IfError` fails on a script error; `IfError: []hcti.RecordingAction{}` ignores errors. Empty branch slices are preserved in JSON.
+
+```go
+actions := []hcti.RecordingAction{
+    hcti.RecordingStallAction{DurationMS: 500},
+    hcti.RecordingScrollAction{Steps: []hcti.ScrollStep{
+        {To: hcti.PositionScrollTarget{Position: hcti.Ptr(hcti.ScrollPositionBottom)}, DurationMS: 2000},
+        {To: hcti.SelectorScrollTarget{Selector: "#pricing"}, DurationMS: 800, Easing: hcti.Ptr(hcti.ScrollEasingEaseOutCubic)},
+    }},
+    hcti.RecordingSimpleScrollAction{ScrollDistance: &hcti.ScrollDistance{Value: 50, Unit: hcti.ScrollViewportHeight}},
+}
+```
+
+`DurationMS` is required, and at least 1, on stall actions and scroll steps. `ScrollDistance` sends a number of CSS pixels when `Unit` is empty, or a string such as `"400px"` (`hcti.ScrollPixels`) or `"50vh"` (`hcti.ScrollViewportHeight`); `Value` must be positive.
+
+```go
+if err := client.DeleteRecording(ctx, "recording-id"); err != nil {
+    return err
+}
+if err := client.DeleteRecordingBatch(ctx, []string{"first-id", "second-id"}); err != nil {
+    return err
+}
+```
+
+All recording methods accept a context and use the existing `*hcti.APIError`, transport-error, and malformed-response contracts. Deletion returns nil when accepted. As with `DeleteImageBatch`, an empty ID list returns nil without calling the API.
+
+Optional settings use the API defaults. Recordings have no audio. Creation returns an ID, status URL, and media URL while rendering can continue in the background. Requesting the media URL waits for processing.
+
+A status fetch makes one request. HTTP 200 and 202 both return status information; `ready`, `failed`, and `cancelled` are terminal states. A status this client version does not recognize decodes as `hcti.RecordingStatusUnknown`. An error can describe an earlier, retryable attempt. A successful status fetch can report a failed recording.
+
+See the [recording guide](https://docs.htmlcsstoimage.com/getting-started/recordings/), [actions reference](https://docs.htmlcsstoimage.com/parameters/actions/), and [trigger reference](https://docs.htmlcsstoimage.com/parameters/trigger/) for the timeline, output options, and examples.
+
 ## Signed URLs
 
 `GenerateTemplatedImageURL` and `GenerateCreateAndRenderURL` produce URLs locally, without API calls. They return `(string, error)` and accept the same templated/URL request types used for image creation. `GenerateCreateAndRenderURL` excludes PDF options and dedupe duration. Signed URLs authorize rendering; do not include confidential template values or request headers in URLs you share.
