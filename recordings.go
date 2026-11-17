@@ -7,7 +7,7 @@ import (
 	"time"
 )
 
-// Recording identifies a created or deduplicated recording. Rendering may continue in the background.
+// Recording identifies a created or deduplicated recording. RecordingURL can be embedded or requested directly; the request waits until the recording is ready.
 type Recording struct {
 	// ID is the recording identifier.
 	ID string `json:"id"`

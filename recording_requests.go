@@ -193,9 +193,9 @@ type RecordingSimpleScrollAction struct {
 	// MSBetweenScrolls Pause between movements in milliseconds. Defaults to 400; 0 scrolls
 	// continuously.
 	MSBetweenScrolls *int `json:"ms_between_scrolls,omitempty"`
-	// ScrollDistance Distance of each movement. Defaults to 90vh.
+	// ScrollDistance Distance of each movement. Leave nil to use API defaults.
 	ScrollDistance *ScrollDistance `json:"scroll_distance,omitempty"`
-	// Easing Movement easing. Defaults to ease_in_out_expo.
+	// Easing Movement easing. Leave nil to use API defaults.
 	Easing *ScrollEasing `json:"easing,omitempty"`
 	// StallAtEndMS Time to hold at the bottom in milliseconds, limited by remaining recording time.
 	// Defaults to 0.

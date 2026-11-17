@@ -148,7 +148,9 @@ recording, err := client.CreateRecording(ctx, &hcti.URLRecordingRequest{
 if err != nil {
     return err
 }
-fmt.Println(recording.RecordingURL)
+fmt.Println(recording.RecordingURL) // Embed or request directly; it waits until the recording is ready.
+
+// Optional: check status in a workflow.
 status, err := client.FetchRecordingStatus(ctx, recording.ID)
 if err != nil {
     return err
@@ -184,7 +186,7 @@ if err := client.DeleteRecordingBatch(ctx, []string{"first-id", "second-id"}); e
 
 All recording methods accept a context and use the existing `*hcti.APIError`, transport-error, and malformed-response contracts. Deletion returns nil when accepted. As with `DeleteImageBatch`, an empty ID list returns nil without calling the API.
 
-Optional settings use the API defaults. Recordings have no audio. Creation returns an ID, status URL, and media URL while rendering can continue in the background. Requesting the media URL waits for processing.
+Optional settings use the API defaults. Recordings have no audio. Creation returns an ID, status URL, and recording URL. The recording URL can be embedded or requested directly; the request waits until the recording is ready, so checking status is optional.
 
 A status fetch makes one request. HTTP 200 and 202 both return status information; `ready`, `failed`, and `cancelled` are terminal states. A status this client version does not recognize decodes as `hcti.RecordingStatusUnknown`. An error can describe an earlier, retryable attempt. A successful status fetch can report a failed recording.
 
