@@ -275,6 +275,52 @@ type SelectorScrollTarget struct {
 
 func (SelectorScrollTarget) scrollTarget() {}
 
+// RecordingAudio is a single MP4 or WebM soundtrack, either RecordingAssetAudio or RecordingURLAudio.
+// See https://docs.htmlcsstoimage.com/parameters/audio/.
+type RecordingAudio interface{ recordingAudio() }
+
+// RecordingAudioEndBehavior controls playback when the track ends before the video.
+type RecordingAudioEndBehavior string
+
+const (
+	// RecordingAudioEndSilence plays the remainder of the video silently (default).
+	RecordingAudioEndSilence RecordingAudioEndBehavior = "silence"
+	// RecordingAudioEndLoop repeats the track from SourceStartMS.
+	RecordingAudioEndLoop RecordingAudioEndBehavior = "loop"
+	// RecordingAudioEndTrimVideo ends the video with the track.
+	RecordingAudioEndTrimVideo RecordingAudioEndBehavior = "trim_video"
+)
+
+// RecordingAudioOptions controls playback on the finished video timeline.
+type RecordingAudioOptions struct {
+	// SourceStartMS is the offset into the source file in milliseconds. Defaults to 0.
+	SourceStartMS *int `json:"source_start_ms,omitempty"`
+	// DelayMS is the delay from the start of the finished video in milliseconds. Defaults to 0.
+	DelayMS *int `json:"delay_ms,omitempty"`
+	// WhenAudioEnds defaults to RecordingAudioEndSilence.
+	WhenAudioEnds *RecordingAudioEndBehavior `json:"when_audio_ends,omitempty"`
+	// ErrorOnSourceInvalid defaults to true. Set false to return the full silent video if the track cannot play at render time.
+	ErrorOnSourceInvalid *bool `json:"error_on_source_invalid,omitempty"`
+}
+
+// RecordingAssetAudio plays a completed audio upload from the recording organization's Asset Library.
+type RecordingAssetAudio struct {
+	// AssetID is the ID returned by the upload. Private uploads are supported.
+	AssetID string `json:"asset_id"`
+	RecordingAudioOptions
+}
+
+func (RecordingAssetAudio) recordingAudio() {}
+
+// RecordingURLAudio plays an audio file hosted at a public URL.
+type RecordingURLAudio struct {
+	// URL is a direct HTTP or HTTPS link to the file, accessible at render time.
+	URL string `json:"url"`
+	RecordingAudioOptions
+}
+
+func (RecordingURLAudio) recordingAudio() {}
+
 // RecordingOutputOptions sets the format, frame rate, and captured-pixel scaling.
 type RecordingOutputOptions struct {
 	// Format Media format. Defaults to mp4.
@@ -357,7 +403,9 @@ type RecordingOptions struct {
 	// Actions Ordered interactions. Leave null or empty to record the page without interactions. See
 	// https://docs.htmlcsstoimage.com/parameters/actions/
 	Actions []RecordingAction `json:"actions,omitempty"`
-	// Output Output format, frame rate, and scale. Defaults to MP4 at 30 fps without audio. See
+	// Audio optionally adds a soundtrack to an MP4 or WebM recording.
+	Audio RecordingAudio `json:"audio,omitempty"`
+	// Output Output format, frame rate, and scale. Defaults to MP4 at 30 fps. See
 	// https://docs.htmlcsstoimage.com/parameters/output/
 	Output *RecordingOutputOptions `json:"output,omitempty"`
 	// DurationMode How duration_ms limits the timeline. Defaults to at_most. See

@@ -186,7 +186,9 @@ if err := client.DeleteRecordingBatch(ctx, []string{"first-id", "second-id"}); e
 
 All recording methods accept a context and use the existing `*hcti.APIError`, transport-error, and malformed-response contracts. Deletion returns nil when accepted. As with `DeleteImageBatch`, an empty ID list returns nil without calling the API.
 
-Optional settings use the API defaults. Recordings have no audio. Creation returns an ID, status URL, and recording URL. The recording URL can be embedded or requested directly; the request waits until the recording is ready, so checking status is optional.
+Optional settings use the API defaults. Creation returns an ID, status URL, and recording URL. The recording URL can be embedded or requested directly; the request waits until the recording is ready, so checking status is optional.
+
+For MP4 or WebM, set `RecordingOptions.Audio` to `hcti.RecordingAssetAudio{AssetID: "YOUR_ASSET_ID"}` or `hcti.RecordingURLAudio{URL: "https://cdn.example.com/audio/intro.mp3"}`. Both accept embedded `hcti.RecordingAudioOptions` for playback settings. [Audio sources and playback options](https://docs.htmlcsstoimage.com/parameters/audio/).
 
 A status fetch makes one request. HTTP 200 and 202 both return status information; `ready`, `failed`, and `cancelled` are terminal states. A status this client version does not recognize decodes as `hcti.RecordingStatusUnknown`. An error can describe an earlier, retryable attempt. A successful status fetch can report a failed recording.
 

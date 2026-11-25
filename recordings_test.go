@@ -24,14 +24,14 @@ func recordingBody(t *testing.T, r *http.Request) map[string]any {
 func TestCreateRecordingHTML(t *testing.T) {
 	request := &HTMLRecordingRequest{
 		HTML: "<h1>Hello</h1>", GoogleFonts: GoogleFonts{" Roboto ", "Open Sans", "Open Sans"},
-		RecordingOptions: RecordingOptions{DurationMS: 1000},
+		RecordingOptions: RecordingOptions{DurationMS: 1000, Audio: RecordingAssetAudio{AssetID: "asset_1"}},
 	}
 	c := testClient(t, 200, recordingCreated, func(r *http.Request) {
 		if r.Method != "POST" || r.URL.Path != "/v1/recording" {
 			t.Fatal(r.Method, r.URL)
 		}
 		body := recordingBody(t, r)
-		want := map[string]any{"html": "<h1>Hello</h1>", "duration_ms": float64(1000), "google_fonts": "Roboto|Open+Sans"}
+		want := map[string]any{"html": "<h1>Hello</h1>", "duration_ms": float64(1000), "google_fonts": "Roboto|Open+Sans", "audio": map[string]any{"asset_id": "asset_1"}}
 		if !reflect.DeepEqual(body, want) {
 			t.Fatalf("payload: %#v", body)
 		}
@@ -62,7 +62,13 @@ func TestRecordingOptionsAndTimeline(t *testing.T) {
 			RequestOverrides: []RequestOverride{{Action: RequestOverrideBlock, ResourceTypes: []RequestOverrideResourceType{ResourceScript}}},
 			Trigger:          RecordingElementVisibleTrigger{Selector: "#ready"},
 			Output:           &RecordingOutputOptions{Format: Ptr(RecordingFormatWebM), FPS: Ptr(60), Scale: Ptr(0.5)},
-			DurationMode:     Ptr(RecordingDurationModeAtLeast), DeferRender: Ptr(false), SkipScrollPreload: Ptr(true),
+			Audio: RecordingURLAudio{
+				URL: "https://cdn.example.com/audio/intro.mp3",
+				RecordingAudioOptions: RecordingAudioOptions{
+					SourceStartMS: Ptr(0), DelayMS: Ptr(500), WhenAudioEnds: Ptr(RecordingAudioEndTrimVideo), ErrorOnSourceInvalid: Ptr(false),
+				},
+			},
+			DurationMode: Ptr(RecordingDurationModeAtLeast), DeferRender: Ptr(false), SkipScrollPreload: Ptr(true),
 			Actions: []RecordingAction{
 				RecordingLocateSelectorAction{Selector: "#modal", IfNotFound: []RecordingAction{}, IfFound: []RecordingAction{
 					RecordingClickAction{Selector: "#close", Button: Ptr(RecordingMouseButtonRight), Count: Ptr(2), OffsetX: Ptr(float64(0)), IfNotFound: []RecordingAction{RecordingErrorAction{}}},
@@ -97,6 +103,12 @@ func TestRecordingOptionsAndTimeline(t *testing.T) {
 		}
 		if !reflect.DeepEqual(body["output"], map[string]any{"format": "webm", "fps": float64(60), "scale": 0.5}) {
 			t.Fatal(body["output"])
+		}
+		if !reflect.DeepEqual(body["audio"], map[string]any{
+			"url": "https://cdn.example.com/audio/intro.mp3", "source_start_ms": float64(0), "delay_ms": float64(500),
+			"when_audio_ends": "trim_video", "error_on_source_invalid": false,
+		}) {
+			t.Fatal(body["audio"])
 		}
 		if body["trigger"].(map[string]any)["type"] != "element_visible" {
 			t.Fatal(body["trigger"])
